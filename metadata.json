@@ -1,0 +1,6 @@
+{
+  "name": "FitTrack Pro",
+  "description": "Precision coaching client management tool for personal trainers with metrics, progress photo tracking, and report sharing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
