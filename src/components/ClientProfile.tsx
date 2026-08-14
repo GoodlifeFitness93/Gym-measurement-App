@@ -156,13 +156,19 @@ export const ClientProfile: React.FC<Props> = ({
 
       if (storageErr) throw storageErr;
 
+      const angleVal: 'front' | 'side' | 'back' = photoTag.includes('Side')
+        ? 'side'
+        : photoTag.includes('Back')
+        ? 'back'
+        : 'front';
+
       // Insert record in progress_photos table
       const { error: dbErr } = await supabase.from('progress_photos').insert({
         client_id: client.id,
         trainer_id: user.id,
         storage_path: storagePath,
-        tag: photoTag,
-        taken_at: new Date().toISOString(),
+        angle: angleVal,
+        taken_on: new Date().toISOString().split('T')[0],
       });
 
       if (dbErr) throw dbErr;
@@ -190,7 +196,7 @@ export const ClientProfile: React.FC<Props> = ({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${client.name.replace(/\s+/g, '_')}_${photo.tag}_${Date.now()}.jpg`;
+      a.download = `${client.name.replace(/\s+/g, '_')}_${photo.angle || 'photo'}_${Date.now()}.jpg`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -232,9 +238,9 @@ export const ClientProfile: React.FC<Props> = ({
       {/* Profile Header Card */}
       <section className="bg-white rounded-xl p-4 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] flex items-center gap-4">
         <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden shrink-0 border-2 border-[#0f766e] bg-[#d8e3fb] flex items-center justify-center font-bold text-xl text-[#005c55]">
-          {client.avatar_url ? (
+          {client.profile_photo_path ? (
             <img
-              src={client.avatar_url}
+              src={client.profile_photo_path}
               alt={client.name}
               className="w-full h-full object-cover"
             />
@@ -456,7 +462,7 @@ export const ClientProfile: React.FC<Props> = ({
           ) : (
             <div className="bg-white rounded-xl border border-[#bdc9c6]/60 divide-y divide-[#bdc9c6]/40 overflow-hidden shadow-sm">
               {measurements.map((m, idx) => {
-                const dateStr = m.measured_at || m.date || m.created_at;
+                const dateStr = m.measured_on || m.created_at;
                 const formattedDate = dateStr
                   ? new Date(dateStr).toLocaleDateString('en-US', {
                       month: 'short',
@@ -610,8 +616,8 @@ export const ClientProfile: React.FC<Props> = ({
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {photos.map((photo, idx) => {
-                  const dateFormatted = photo.taken_at || photo.created_at
-                    ? new Date(photo.taken_at || photo.created_at!).toLocaleDateString('en-US', {
+                  const dateFormatted = photo.taken_on || photo.created_at
+                    ? new Date(photo.taken_on || photo.created_at!).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
@@ -627,7 +633,7 @@ export const ClientProfile: React.FC<Props> = ({
                         {photo.signed_url ? (
                           <img
                             src={photo.signed_url}
-                            alt={photo.tag}
+                            alt={photo.angle}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -651,8 +657,8 @@ export const ClientProfile: React.FC<Props> = ({
                         <span className="text-[10px] font-semibold bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded w-max">
                           {dateFormatted}
                         </span>
-                        <span className="text-xs font-bold drop-shadow">
-                          {photo.tag}
+                        <span className="text-xs font-bold uppercase drop-shadow">
+                          {photo.angle || 'Photo'}
                         </span>
                       </div>
                     </div>

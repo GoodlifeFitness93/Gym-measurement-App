@@ -251,7 +251,7 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => 
             </div>
           ) : (
             measurements.slice().reverse().map((m, idx) => {
-              const dStr = m.measured_at || m.date || m.created_at;
+              const dStr = m.measured_on || m.created_at;
               const dateFmt = dStr
                 ? new Date(dStr).toLocaleDateString('en-US', {
                     month: 'short',

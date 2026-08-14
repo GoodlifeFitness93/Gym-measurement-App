@@ -37,7 +37,7 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
       // Fetch measurements to compute check-in date and weight changes
       const { data: measurementsData, error: measurementsError } = await supabase
         .from('measurements')
-        .select('client_id, weight, measured_at, date, created_at')
+        .select('client_id, weight, measured_on, created_at')
         .order('created_at', { ascending: true });
 
       if (measurementsError) throw measurementsError;
@@ -72,7 +72,7 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
             weightChange = parseFloat((currW - startW).toFixed(1));
           }
 
-          const rawDate = lastM.measured_at || lastM.date || lastM.created_at;
+          const rawDate = lastM.measured_on || lastM.created_at;
           if (rawDate) {
             lastDate = new Date(rawDate);
             needsUpdate = lastDate < fourteenDaysAgo;
@@ -228,9 +228,9 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
                 {/* Avatar with Status Dot */}
                 <div className="relative shrink-0">
                   <div className="w-12 h-12 rounded-full border border-[#dee8ff] overflow-hidden bg-[#d8e3fb] flex items-center justify-center font-bold text-[#005c55]">
-                    {client.avatar_url ? (
+                    {client.profile_photo_path ? (
                       <img
-                        src={client.avatar_url}
+                        src={client.profile_photo_path}
                         alt={client.name}
                         className="w-full h-full object-cover"
                       />

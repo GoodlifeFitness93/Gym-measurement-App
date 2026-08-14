@@ -58,7 +58,7 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
               await supabase.from('trainer_profiles').upsert({
                 id: user.id,
                 full_name: fullName.trim(),
-                default_unit: 'metric',
+                unit_preference: 'metric',
               }, { onConflict: 'id' });
             } catch (pErr) {
               console.error('Failed to upsert trainer profile:', pErr);

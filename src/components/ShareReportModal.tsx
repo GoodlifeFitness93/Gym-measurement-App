@@ -50,8 +50,8 @@ export const ShareReportModal: React.FC<Props> = ({ client, onNavigate }) => {
   const firstM = measurements.length > 0 ? measurements[0] : null;
   const lastM = measurements.length > 0 ? measurements[measurements.length - 1] : null;
 
-  const startDateStr = firstM?.measured_at || firstM?.date || firstM?.created_at;
-  const endDateStr = lastM?.measured_at || lastM?.date || lastM?.created_at;
+  const startDateStr = firstM?.measured_on || firstM?.created_at;
+  const endDateStr = lastM?.measured_on || lastM?.created_at;
 
   const startDateFmt = startDateStr
     ? new Date(startDateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })

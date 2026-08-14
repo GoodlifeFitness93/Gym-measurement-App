@@ -53,7 +53,7 @@ export const Dashboard: React.FC<Props> = ({
       // Fetch measurements for all clients to compute checkin dates
       const { data: measurementsData, error: measurementsError } = await supabase
         .from('measurements')
-        .select('client_id, measured_at, date, weight, created_at')
+        .select('client_id, measured_on, weight, created_at')
         .order('created_at', { ascending: false });
 
       if (measurementsError) throw measurementsError;
@@ -64,7 +64,7 @@ export const Dashboard: React.FC<Props> = ({
       // Group latest measurement date per client
       const latestMeasurementMap = new Map<string, Date>();
       (measurementsData || []).forEach((m: any) => {
-        const dateStr = m.measured_at || m.date || m.created_at;
+        const dateStr = m.measured_on || m.created_at;
         if (dateStr) {
           const mDate = new Date(dateStr);
           if (!latestMeasurementMap.has(m.client_id) || mDate > latestMeasurementMap.get(m.client_id)!) {
@@ -106,11 +106,11 @@ export const Dashboard: React.FC<Props> = ({
       // Fetch new progress photos count (last 14 days)
       const { data: photosData, error: photosError } = await supabase
         .from('progress_photos')
-        .select('id, taken_at, created_at');
+        .select('id, taken_on, created_at');
 
       if (!photosError && photosData) {
         const recentPhotos = photosData.filter((p: any) => {
-          const pDate = new Date(p.taken_at || p.created_at);
+          const pDate = new Date(p.taken_on || p.created_at);
           return pDate >= fourteenDaysAgo;
         });
         setNewPhotosCount(recentPhotos.length || photosData.length);
@@ -260,9 +260,9 @@ export const Dashboard: React.FC<Props> = ({
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-full bg-[#d8e3fb] flex items-center justify-center font-bold text-[#005c55] overflow-hidden shrink-0">
-                      {client.avatar_url ? (
+                      {client.profile_photo_path ? (
                         <img
-                          src={client.avatar_url}
+                          src={client.profile_photo_path}
                           alt={client.name}
                           className="w-full h-full object-cover"
                         />

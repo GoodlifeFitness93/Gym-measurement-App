@@ -75,8 +75,8 @@ export const AddMeasurementModal: React.FC<Props> = ({
       const record: any = {
         client_id: client.id,
         trainer_id: user.id,
-        measured_at: date,
-        date: date,
+        measured_on: date,
+        unit: unit,
         weight: parsedWeight,
         body_fat_percent: parsedBodyFat,
         chest: parsedChest,
@@ -85,7 +85,6 @@ export const AddMeasurementModal: React.FC<Props> = ({
         neck: parsedNeck,
         arm: parsedArm,
         thigh: parsedThigh,
-        unit: unit,
         notes: notes.trim() || null,
       };
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getSupabase, getSupabaseConfig, saveSupabaseConfig } from '../lib/supabase';
+import { getSupabase, getSupabaseConfig } from '../lib/supabase';
 import { TrainerProfile, ActiveScreen } from '../types';
 
 interface Props {
@@ -7,20 +7,18 @@ interface Props {
   onLogout: () => void;
 }
 
-export const SettingsScreen: React.FC<Props> = ({ onNavigate, onLogout }) => {
+export const SettingsScreen: React.FC<Props> = ({ onLogout }) => {
   const [profile, setProfile] = useState<TrainerProfile | null>(null);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [defaultUnit, setDefaultUnit] = useState<'metric' | 'imperial'>('metric');
+  const [unitPreference, setUnitPreference] = useState<'metric' | 'imperial'>('metric');
 
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Supabase Config edit
+  // Read-only Supabase Config
   const envConfig = getSupabaseConfig();
-  const [sbUrl, setSbUrl] = useState(envConfig.url);
-  const [sbKey, setSbKey] = useState(envConfig.key);
 
   const fetchProfile = async () => {
     const supabase = getSupabase();
@@ -40,7 +38,7 @@ export const SettingsScreen: React.FC<Props> = ({ onNavigate, onLogout }) => {
         setProfile(data);
         setFullName(data.full_name || user.user_metadata?.full_name || '');
         setPhone(data.phone || '');
-        setDefaultUnit(data.default_unit || 'metric');
+        setUnitPreference(data.unit_preference || 'metric');
       } else {
         setFullName(user.user_metadata?.full_name || user.email || '');
       }
@@ -74,7 +72,7 @@ export const SettingsScreen: React.FC<Props> = ({ onNavigate, onLogout }) => {
         id: user.id,
         full_name: fullName.trim(),
         phone: phone.trim() || null,
-        default_unit: defaultUnit,
+        unit_preference: unitPreference,
       });
 
       if (upsertErr) throw upsertErr;
@@ -87,13 +85,6 @@ export const SettingsScreen: React.FC<Props> = ({ onNavigate, onLogout }) => {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleUpdateSupabaseConfig = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveSupabaseConfig(sbUrl, sbKey);
-    alert('Supabase configuration saved! Reloading application...');
-    window.location.reload();
   };
 
   const handleLogoutClick = async () => {
@@ -151,14 +142,14 @@ export const SettingsScreen: React.FC<Props> = ({ onNavigate, onLogout }) => {
 
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-[#3e4947] mb-2">
-            Default Measurement Unit
+            Unit Preference
           </label>
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => setDefaultUnit('metric')}
+              onClick={() => setUnitPreference('metric')}
               className={`flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-lg border transition-all ${
-                defaultUnit === 'metric'
+                unitPreference === 'metric'
                   ? 'bg-[#005c55] text-white border-[#005c55]'
                   : 'bg-[#f0f3ff] text-[#3e4947] border-[#bdc9c6]'
               }`}
@@ -167,9 +158,9 @@ export const SettingsScreen: React.FC<Props> = ({ onNavigate, onLogout }) => {
             </button>
             <button
               type="button"
-              onClick={() => setDefaultUnit('imperial')}
+              onClick={() => setUnitPreference('imperial')}
               className={`flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-lg border transition-all ${
-                defaultUnit === 'imperial'
+                unitPreference === 'imperial'
                   ? 'bg-[#005c55] text-white border-[#005c55]'
                   : 'bg-[#f0f3ff] text-[#3e4947] border-[#bdc9c6]'
               }`}
@@ -197,12 +188,12 @@ export const SettingsScreen: React.FC<Props> = ({ onNavigate, onLogout }) => {
         </div>
       </form>
 
-      {/* Database Credentials / Supabase Status */}
-      <form onSubmit={handleUpdateSupabaseConfig} className="bg-white rounded-xl p-6 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] space-y-4">
+      {/* Read-only Database Connection Info */}
+      <div className="bg-white rounded-xl p-6 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] space-y-4">
         <h3 className="text-lg font-semibold text-[#005c55] pb-2 border-b border-[#d8e3fb] flex items-center justify-between">
           <span>Supabase Connection</span>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-[#86f2e4] text-[#006f66] uppercase">
-            Connected
+            Connected via Env
           </span>
         </h3>
 
@@ -212,9 +203,9 @@ export const SettingsScreen: React.FC<Props> = ({ onNavigate, onLogout }) => {
           </label>
           <input
             type="text"
-            value={sbUrl}
-            onChange={(e) => setSbUrl(e.target.value)}
-            className="input-clinical w-full px-4 py-2 text-xs font-mono text-[#111c2d]"
+            readOnly
+            value={envConfig.url || 'Not configured'}
+            className="bg-[#f1f5f9] border border-[#bdc9c6]/50 w-full px-4 py-2 text-xs font-mono text-[#6e7977] rounded-lg focus:outline-none"
           />
         </div>
 
@@ -224,19 +215,12 @@ export const SettingsScreen: React.FC<Props> = ({ onNavigate, onLogout }) => {
           </label>
           <input
             type="password"
-            value={sbKey}
-            onChange={(e) => setSbKey(e.target.value)}
-            className="input-clinical w-full px-4 py-2 text-xs font-mono text-[#111c2d]"
+            readOnly
+            value={envConfig.key ? '••••••••••••••••••••••••••••••••' : 'Not configured'}
+            className="bg-[#f1f5f9] border border-[#bdc9c6]/50 w-full px-4 py-2 text-xs font-mono text-[#6e7977] rounded-lg focus:outline-none"
           />
         </div>
-
-        <button
-          type="submit"
-          className="bg-[#f0f3ff] hover:bg-[#dee8ff] text-[#005c55] border border-[#005c55] text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-lg"
-        >
-          Update Credentials
-        </button>
-      </form>
+      </div>
 
       {/* Logout Action Card */}
       <div className="bg-white rounded-xl p-6 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] flex items-center justify-between">
