@@ -132,7 +132,7 @@ export const ShareReportModal: React.FC<Props> = ({ client, onNavigate }) => {
     }
 
     lines.push('');
-    lines.push('Keep up the great work! — FitTrack Pro');
+    lines.push('Keep up the great work! — Goodlife Fitness');
 
     return lines.join('\n');
   };

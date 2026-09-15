@@ -8,6 +8,15 @@ interface Props {
   trainerName?: string;
 }
 
+interface RecentActivityItem {
+  id: string;
+  kind: 'client' | 'measurement' | 'photo';
+  clientName: string;
+  clientId: string;
+  description: string;
+  at: string;
+}
+
 export const Dashboard: React.FC<Props> = ({
   onNavigate,
   onSelectClient,
@@ -18,6 +27,7 @@ export const Dashboard: React.FC<Props> = ({
   const [totalClientsCount, setTotalClientsCount] = useState<number>(0);
   const [checkinsDueCount, setCheckinsDueCount] = useState<number>(0);
   const [newPhotosCount, setNewPhotosCount] = useState<number>(0);
+  const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,18 +113,59 @@ export const Dashboard: React.FC<Props> = ({
       setNeedsUpdateClients(needsUpdateList);
       setClients(clientList);
 
-      // Fetch new progress photos count (last 14 days)
+      // Fetch new progress photos count (last 14 days) + recent activity feed
       const { data: photosData, error: photosError } = await supabase
         .from('progress_photos')
-        .select('id, taken_on, created_at');
+        .select('id, client_id, angle, taken_on, taken_at, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
 
+      let recentPhotoItems: RecentActivityItem[] = [];
       if (!photosError && photosData) {
         const recentPhotos = photosData.filter((p: any) => {
           const pDate = new Date(p.taken_on || p.created_at);
           return pDate >= fourteenDaysAgo;
         });
         setNewPhotosCount(recentPhotos.length || photosData.length);
+
+        const clientNameById = new Map(clientList.map((c) => [c.id, c.name]));
+        recentPhotoItems = photosData.slice(0, 5).map((p: any) => ({
+          id: `photo-${p.id}`,
+          kind: 'photo' as const,
+          clientName: clientNameById.get(p.client_id) || 'Client',
+          clientId: p.client_id,
+          description: `New ${p.angle?.replace('_', ' ') || ''} photo uploaded`.replace(/\s+/g, ' ').trim(),
+          at: p.created_at || p.taken_at || p.taken_on,
+        }));
       }
+
+      // Build merged recent activity feed: recent clients + recent measurements + recent photos
+      const recentClientItems: RecentActivityItem[] = clientList.slice(0, 5).map((c) => ({
+        id: `client-${c.id}`,
+        kind: 'client',
+        clientName: c.name,
+        clientId: c.id,
+        description: 'New client added',
+        at: c.created_at || '',
+      }));
+
+      const recentMeasurementItems: RecentActivityItem[] = (measurementsData || [])
+        .slice(0, 5)
+        .map((m: any, idx: number) => ({
+          id: `measurement-${m.client_id}-${idx}`,
+          kind: 'measurement' as const,
+          clientName: clientList.find((c) => c.id === m.client_id)?.name || 'Client',
+          clientId: m.client_id,
+          description: 'Measurement logged',
+          at: m.created_at || m.measured_on || '',
+        }));
+
+      const merged = [...recentClientItems, ...recentMeasurementItems, ...recentPhotoItems]
+        .filter((item) => item.at)
+        .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+        .slice(0, 5);
+
+      setRecentActivity(merged);
     } catch (err: any) {
       console.error('Error loading dashboard data:', err);
       setError(err.message || 'Failed to load dashboard data');
@@ -163,6 +214,38 @@ export const Dashboard: React.FC<Props> = ({
           </button>
         </div>
       )}
+
+      {/* Quick Actions */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <button
+          onClick={() => onNavigate('add_client')}
+          className="bg-[#005c55] hover:bg-[#0f766e] text-white rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-[0_4px_12px_rgba(0,92,85,0.15)] btn-press transition-colors"
+        >
+          <span className="material-symbols-outlined text-2xl">person_add</span>
+          <span className="text-xs font-semibold uppercase tracking-wider">New Client</span>
+        </button>
+        <button
+          onClick={() => onNavigate('client_list')}
+          className="bg-white hover:bg-[#f0f3ff] text-[#111c2d] border border-[#bdc9c6]/60 rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-sm btn-press transition-colors"
+        >
+          <span className="material-symbols-outlined text-2xl text-[#005c55]">straighten</span>
+          <span className="text-xs font-semibold uppercase tracking-wider">Add Measurement</span>
+        </button>
+        <button
+          onClick={() => onNavigate('client_list')}
+          className="bg-white hover:bg-[#f0f3ff] text-[#111c2d] border border-[#bdc9c6]/60 rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-sm btn-press transition-colors"
+        >
+          <span className="material-symbols-outlined text-2xl text-[#005c55]">add_a_photo</span>
+          <span className="text-xs font-semibold uppercase tracking-wider">Add Photo</span>
+        </button>
+        <button
+          onClick={() => onNavigate('client_list')}
+          className="bg-white hover:bg-[#f0f3ff] text-[#111c2d] border border-[#bdc9c6]/60 rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-sm btn-press transition-colors"
+        >
+          <span className="material-symbols-outlined text-2xl text-[#005c55]">groups</span>
+          <span className="text-xs font-semibold uppercase tracking-wider">View Clients</span>
+        </button>
+      </section>
 
       {/* Summary Bento Grid */}
       <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -291,6 +374,48 @@ export const Dashboard: React.FC<Props> = ({
 
                   <div className="bg-[#ffdad6] text-[#93000a] rounded-full p-2 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-lg">flag</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
+
+      {/* Recent Activity */}
+      <section className="space-y-3">
+        <h3 className="text-xl font-semibold text-[#111c2d]">Recent Activity</h3>
+        <div className="bg-white rounded-xl border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-sm text-[#6e7977]">Loading activity...</div>
+          ) : recentActivity.length === 0 ? (
+            <div className="p-8 text-center text-sm text-[#6e7977]">
+              No recent activity yet — add a client to get started.
+            </div>
+          ) : (
+            recentActivity.map((item, idx) => {
+              const client = clients.find((c) => c.id === item.clientId);
+              const icon =
+                item.kind === 'client' ? 'person_add' : item.kind === 'photo' ? 'add_a_photo' : 'straighten';
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    if (client) {
+                      onSelectClient(client);
+                      onNavigate('client_profile');
+                    }
+                  }}
+                  className={`flex items-center gap-3 p-4 hover:bg-[#f0f3ff] transition-colors ${
+                    client ? 'cursor-pointer' : ''
+                  } ${idx !== recentActivity.length - 1 ? 'border-b border-[#bdc9c6]/40' : ''}`}
+                >
+                  <div className="w-9 h-9 rounded-full bg-[#e7eeff] flex items-center justify-center text-[#005c55] shrink-0">
+                    <span className="material-symbols-outlined text-lg">{icon}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#111c2d] truncate">{item.clientName}</p>
+                    <p className="text-xs text-[#3e4947]">{item.description}</p>
                   </div>
                 </div>
               );

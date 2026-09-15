@@ -105,7 +105,7 @@ export const AddClientModal: React.FC<Props> = ({ onNavigate, onSuccess }) => {
             </label>
             <input
               type="tel"
-              placeholder="+1 (555) 019-2834"
+              placeholder="+91 98765 43210"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="input-clinical w-full px-4 py-2.5 rounded-t-lg text-base text-[#111c2d] placeholder:text-[#6e7977]"

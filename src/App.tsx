@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { isSupabaseConfigured, getSupabase } from './lib/supabase';
-import { SupabaseNotConfigured } from './components/SupabaseNotConfigured';
 import { AuthScreen } from './components/AuthScreen';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { Dashboard } from './components/Dashboard';
@@ -110,12 +110,16 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Render 1: Supabase Credentials Missing
+  // Render 1: Supabase Credentials Missing (developer-facing only; never shown to end users)
   if (!configured) {
     return (
-      <SupabaseNotConfigured
-        onConfigured={() => setConfigured(isSupabaseConfigured())}
-      />
+      <div className="min-h-screen bg-[#f9f9ff] flex flex-col justify-center items-center p-6 text-[#111c2d] text-center gap-2">
+        <span className="material-symbols-outlined text-4xl text-[#ba1a1a]">error</span>
+        <p className="text-sm font-semibold text-[#93000a]">Configuration Error</p>
+        <p className="text-xs text-[#3e4947] max-w-sm">
+          The application is missing required environment configuration. Check the server/deployment logs for details.
+        </p>
+      </div>
     );
   }
 
@@ -125,7 +129,7 @@ export default function App() {
       <div className="min-h-screen bg-[#f9f9ff] flex flex-col justify-center items-center p-6 text-[#111c2d]">
         <div className="flex flex-col items-center gap-3">
           <span className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-[#005c55] border-t-transparent" />
-          <p className="text-sm font-semibold text-[#005c55]">Loading FitTrack Pro...</p>
+          <p className="text-sm font-semibold text-[#005c55]">Loading Goodlife Fitness...</p>
         </div>
       </div>
     );
@@ -136,7 +140,56 @@ export default function App() {
     return <AuthScreen onSuccess={() => setConfigured(true)} />;
   }
 
-  // Render 4: Authenticated App
+  // Render 4: Trainer profile still loading (avoids a flash of the wrong screen)
+  if (!trainerProfile) {
+    return (
+      <div className="min-h-screen bg-[#f9f9ff] flex flex-col justify-center items-center p-6 text-[#111c2d]">
+        <span className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-[#005c55] border-t-transparent" />
+      </div>
+    );
+  }
+
+  // Render 5: Deactivated Account
+  if (!trainerProfile.is_active) {
+    return (
+      <div className="min-h-screen bg-[#f9f9ff] flex flex-col justify-center items-center p-6 text-[#111c2d] text-center gap-3">
+        <span className="material-symbols-outlined text-4xl text-[#ba1a1a]">lock</span>
+        <h1 className="text-lg font-semibold text-[#93000a]">Account Inactive</h1>
+        <p className="text-sm text-[#3e4947] max-w-sm">
+          Your Goodlife Fitness trainer account is currently inactive. Please contact the administrator.
+        </p>
+        <button
+          onClick={async () => {
+            const supabase = getSupabase();
+            if (supabase) await supabase.auth.signOut().catch(() => null);
+            setSession(null);
+            setTrainerProfile(null);
+          }}
+          className="mt-2 bg-[#005c55] hover:bg-[#0f766e] text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-lg btn-press"
+        >
+          Sign Out
+        </button>
+      </div>
+    );
+  }
+
+  // Render 6: Admin App
+  if (trainerProfile.role === 'admin') {
+    return (
+      <AdminDashboard
+        adminId={trainerProfile.id}
+        adminName={trainerProfile.full_name}
+        onLogout={async () => {
+          const supabase = getSupabase();
+          if (supabase) await supabase.auth.signOut().catch(() => null);
+          setSession(null);
+          setTrainerProfile(null);
+        }}
+      />
+    );
+  }
+
+  // Render 7: Authenticated Trainer App
   const showBack = activeScreen !== 'dashboard';
 
   return (

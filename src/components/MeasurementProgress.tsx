@@ -1,6 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, ActiveScreen } from '../types';
+
+const METRIC_LABELS: Record<'weight' | 'body_fat_percent' | 'chest' | 'waist', { label: string; unit: string }> = {
+  weight: { label: 'Weight', unit: 'kg' },
+  body_fat_percent: { label: 'Body Fat', unit: '%' },
+  waist: { label: 'Waist', unit: 'cm' },
+  chest: { label: 'Chest', unit: 'cm' },
+};
+
+const RANGE_DAYS: Record<'1W' | '1M' | '3M' | '6M' | 'ALL', number | null> = {
+  '1W': 7,
+  '1M': 30,
+  '3M': 90,
+  '6M': 180,
+  ALL: null,
+};
 
 interface Props {
   client: Client;
@@ -41,18 +56,57 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => 
     fetchMeasurements();
   }, [client.id]);
 
-  // Compute metric stats
+  // Compute metric stats (no fabricated fallback values — dashes when data is missing)
   const latestM = measurements.length > 0 ? measurements[measurements.length - 1] : null;
-  const currentWeight = latestM?.weight ?? client.starting_weight ?? 68.2;
-  const currentBodyFat = latestM?.body_fat_percent ?? 22.4;
-  const currentWaist = latestM?.waist ?? 78.0;
-  const currentChest = latestM?.chest ?? 92.0;
+  const currentWeight = latestM?.weight ?? client.starting_weight ?? null;
+  const currentBodyFat = latestM?.body_fat_percent ?? null;
+  const currentWaist = latestM?.waist ?? null;
+  const currentChest = latestM?.chest ?? null;
 
-  // Calculate 3-month trend
-  const firstM = measurements.length > 0 ? measurements[0] : null;
-  const trendDiff = (latestM?.weight && firstM?.weight)
-    ? parseFloat((latestM.weight - firstM.weight).toFixed(1))
-    : -3.4;
+  // Filter measurements to the selected date range
+  const rangeFilteredMeasurements = useMemo(() => {
+    const days = RANGE_DAYS[dateRange];
+    if (days === null) return measurements;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    return measurements.filter((m) => {
+      const d = m.measured_on || m.created_at;
+      return d ? new Date(d).getTime() >= cutoff : false;
+    });
+  }, [measurements, dateRange]);
+
+  // Data-driven chart points for the selected metric (replaces the previous hardcoded polyline)
+  const chartPoints = useMemo(() => {
+    const withValue = rangeFilteredMeasurements.filter(
+      (m) => m[selectedMetric] !== null && m[selectedMetric] !== undefined
+    );
+    if (withValue.length < 2) return null;
+
+    const values = withValue.map((m) => m[selectedMetric] as number);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+
+    return withValue.map((m, idx) => ({
+      x: (idx / (withValue.length - 1)) * 100,
+      y: 100 - ((m[selectedMetric] as number) - min) / range * 100,
+      value: m[selectedMetric] as number,
+      date: m.measured_on || m.created_at || '',
+    }));
+  }, [rangeFilteredMeasurements, selectedMetric]);
+
+  const firstChartDate = chartPoints && chartPoints[0].date
+    ? new Date(chartPoints[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
+  const lastChartDate = chartPoints && chartPoints[chartPoints.length - 1].date
+    ? new Date(chartPoints[chartPoints.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
+
+  // Overall trend across the selected range
+  const firstM = rangeFilteredMeasurements.length > 0 ? rangeFilteredMeasurements[0] : null;
+  const lastM = rangeFilteredMeasurements.length > 0 ? rangeFilteredMeasurements[rangeFilteredMeasurements.length - 1] : null;
+  const trendDiff = (lastM?.weight !== null && lastM?.weight !== undefined && firstM?.weight !== null && firstM?.weight !== undefined)
+    ? parseFloat(((lastM!.weight as number) - (firstM!.weight as number)).toFixed(1))
+    : null;
 
   return (
     <div className="flex-grow w-full max-w-4xl mx-auto p-5 flex flex-col gap-6 pb-28 font-['Inter',sans-serif]">
@@ -79,7 +133,7 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => 
           }`}>
             Weight
           </span>
-          <span className="text-xl font-bold">{currentWeight} kg</span>
+          <span className="text-xl font-bold">{currentWeight !== null ? `${currentWeight} kg` : '—'}</span>
         </button>
 
         <button
@@ -95,7 +149,7 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => 
           }`}>
             Body Fat
           </span>
-          <span className="text-xl font-bold">{currentBodyFat} %</span>
+          <span className="text-xl font-bold">{currentBodyFat !== null ? `${currentBodyFat} %` : '—'}</span>
         </button>
 
         <button
@@ -111,7 +165,7 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => 
           }`}>
             Waist
           </span>
-          <span className="text-xl font-bold">{currentWaist} cm</span>
+          <span className="text-xl font-bold">{currentWaist !== null ? `${currentWaist} cm` : '—'}</span>
         </button>
 
         <button
@@ -127,7 +181,7 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => 
           }`}>
             Chest
           </span>
-          <span className="text-xl font-bold">{currentChest} cm</span>
+          <span className="text-xl font-bold">{currentChest !== null ? `${currentChest} cm` : '—'}</span>
         </button>
       </section>
 
@@ -151,75 +205,59 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => 
         </div>
 
         {/* Chart Canvas Area */}
-        <div className="relative h-64 w-full mt-2 flex items-end">
-          <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[#3e4947] text-xs font-semibold text-right pr-2 pb-6 border-r border-[#bdc9c6]/50">
-            <span>72kg</span>
-            <span>70kg</span>
-            <span>68kg</span>
-            <span>66kg</span>
-          </div>
+        {chartPoints ? (
+          <div className="relative h-64 w-full mt-2 flex items-end">
+            <div className="ml-2 w-full h-full relative border-b border-[#bdc9c6]/50">
+              <svg className="absolute inset-0 w-full h-full z-20" preserveAspectRatio="none" viewBox="0 0 100 100">
+                <polyline
+                  fill="none"
+                  points={chartPoints.map((p) => `${p.x},${p.y}`).join(' ')}
+                  stroke="#0f766e"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+              {chartPoints.map((p, idx) => (
+                <div
+                  key={idx}
+                  className="absolute w-2.5 h-2.5 bg-white border-2 border-[#0f766e] rounded-full -translate-x-1/2 translate-y-1/2"
+                  style={{ left: `${p.x}%`, bottom: `${100 - p.y}%` }}
+                  title={`${p.value} ${METRIC_LABELS[selectedMetric].unit}`}
+                />
+              ))}
 
-          <div className="ml-10 w-full h-full relative border-b border-[#bdc9c6]/50">
-            {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between z-0 pointer-events-none">
-              <div className="w-full border-t border-[#bdc9c6]/30 h-0" />
-              <div className="w-full border-t border-[#bdc9c6]/30 h-0" />
-              <div className="w-full border-t border-[#bdc9c6]/30 h-0" />
-              <div className="w-full border-t border-[#bdc9c6]/30 h-0" />
-            </div>
-
-            {/* Area Fill */}
-            <div
-              className="absolute bottom-0 left-0 right-0 h-3/4 z-10"
-              style={{
-                background: 'linear-gradient(to top, rgba(15, 118, 110, 0.15) 0%, rgba(15, 118, 110, 0) 100%)',
-                clipPath: 'polygon(0% 100%, 0% 80%, 20% 70%, 40% 60%, 60% 75%, 80% 50%, 100% 40%, 100% 100%)',
-              }}
-            />
-
-            {/* Line SVG */}
-            <svg className="absolute inset-0 w-full h-full z-20" preserveAspectRatio="none" viewBox="0 0 100 100">
-              <path
-                d="M0,80 L20,70 L40,60 L60,75 L80,50 L100,40"
-                fill="none"
-                stroke="#0f766e"
-                strokeWidth="2.5"
-                vectorEffect="non-scaling-stroke"
-              />
-              <circle cx="0" cy="80" fill="#ffffff" r="3.5" stroke="#0f766e" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-              <circle cx="20" cy="70" fill="#ffffff" r="3.5" stroke="#0f766e" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-              <circle cx="40" cy="60" fill="#ffffff" r="3.5" stroke="#0f766e" strokeWidth="2" vector-effect="non-scaling-stroke" />
-              <circle cx="60" cy="75" fill="#ffffff" r="3.5" stroke="#0f766e" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-              <circle cx="80" cy="50" fill="#ffffff" r="3.5" stroke="#0f766e" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-              <circle cx="100" cy="40" fill="#0f766e" r="5" stroke="#ffffff" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-            </svg>
-
-            {/* Current Tooltip Badge */}
-            <div className="absolute right-0 top-[30%] -translate-y-full translate-x-2 bg-[#263143] text-[#ecf1ff] px-2 py-1 rounded shadow-md z-30 text-xs font-bold whitespace-nowrap">
-              {currentWeight} kg
-            </div>
-
-            {/* X-Axis Month Labels */}
-            <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-[#3e4947] text-xs font-semibold px-2">
-              <span>Oct</span>
-              <span>Nov</span>
-              <span>Dec</span>
-              <span>Jan</span>
+              {/* X-Axis date range labels */}
+              <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-[#3e4947] text-xs font-semibold px-1">
+                <span>{firstChartDate}</span>
+                <span>{lastChartDate}</span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="h-32 w-full flex items-center justify-center text-center text-sm text-[#6e7977]">
+            Not enough {METRIC_LABELS[selectedMetric].label.toLowerCase()} entries in this range to chart a trend.
+          </div>
+        )}
 
-        {/* 3-Month Trend bar */}
+        {/* Overall Trend bar */}
         <div className="mt-8 flex items-center justify-between pt-4 border-t border-[#bdc9c6]/50">
           <div className="flex flex-col">
             <span className="text-[11px] font-semibold text-[#3e4947] uppercase tracking-wider">
               Overall Trend
             </span>
             <div className="flex items-center text-[#005c55] mt-0.5 gap-1 font-semibold text-sm">
-              <span className="material-symbols-outlined text-base">
-                {trendDiff <= 0 ? 'trending_down' : 'trending_up'}
-              </span>
-              <span>{trendDiff > 0 ? `+${trendDiff}` : trendDiff} kg</span>
+              {trendDiff !== null ? (
+                <>
+                  <span className="material-symbols-outlined text-base">
+                    {trendDiff <= 0 ? 'trending_down' : 'trending_up'}
+                  </span>
+                  <span>{trendDiff > 0 ? `+${trendDiff}` : trendDiff} kg</span>
+                </>
+              ) : (
+                <span className="text-[#6e7977] font-normal">Not enough data</span>
+              )}
             </div>
           </div>
 

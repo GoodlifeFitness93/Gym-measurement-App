@@ -3,6 +3,8 @@ export interface TrainerProfile {
   full_name: string;
   phone?: string | null;
   unit_preference: 'metric' | 'imperial';
+  role: 'trainer' | 'admin';
+  is_active: boolean;
   created_at?: string;
 }
 
@@ -43,12 +45,15 @@ export interface Measurement {
   created_at?: string;
 }
 
+export type PhotoAngle = 'front' | 'back' | 'right_side' | 'left_side' | 'side';
+
 export interface ProgressPhoto {
   id?: string;
   client_id: string;
   trainer_id: string;
-  taken_on: string; // date YYYY-MM-DD
-  angle: 'front' | 'side' | 'back';
+  taken_on: string; // date YYYY-MM-DD (legacy, kept for compatibility)
+  taken_at?: string; // full timestamp (ISO), editable
+  angle: PhotoAngle; // 'side' is a legacy value from before the 4-angle system
   storage_path: string;
   created_at?: string;
   signed_url?: string | null;

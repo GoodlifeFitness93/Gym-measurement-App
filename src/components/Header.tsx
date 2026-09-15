@@ -35,7 +35,7 @@ export const Header: React.FC<Props> = ({
           onClick={() => onNavigate('dashboard')}
           className="font-extrabold text-xl md:text-2xl text-[#005c55] tracking-tight text-center cursor-pointer flex-1"
         >
-          FitTrack Pro
+          Goodlife Fitness
         </h1>
 
         {/* Desktop Nav Cluster */}

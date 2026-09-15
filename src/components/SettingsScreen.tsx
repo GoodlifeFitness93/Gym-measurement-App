@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getSupabase, getSupabaseConfig } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 import { TrainerProfile, ActiveScreen } from '../types';
 
 interface Props {
@@ -16,9 +16,6 @@ export const SettingsScreen: React.FC<Props> = ({ onLogout }) => {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Read-only Supabase Config
-  const envConfig = getSupabaseConfig();
 
   const fetchProfile = async () => {
     const supabase = getSupabase();
@@ -133,7 +130,7 @@ export const SettingsScreen: React.FC<Props> = ({ onLogout }) => {
           </label>
           <input
             type="tel"
-            placeholder="+1 (555) 000-0000"
+            placeholder="+91 98765 43210"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="input-clinical w-full px-4 py-2.5 rounded-t-lg text-base text-[#111c2d]"
@@ -187,40 +184,6 @@ export const SettingsScreen: React.FC<Props> = ({ onLogout }) => {
           )}
         </div>
       </form>
-
-      {/* Read-only Database Connection Info */}
-      <div className="bg-white rounded-xl p-6 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] space-y-4">
-        <h3 className="text-lg font-semibold text-[#005c55] pb-2 border-b border-[#d8e3fb] flex items-center justify-between">
-          <span>Supabase Connection</span>
-          <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-[#86f2e4] text-[#006f66] uppercase">
-            Connected via Env
-          </span>
-        </h3>
-
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-[#3e4947] mb-1">
-            Supabase URL
-          </label>
-          <input
-            type="text"
-            readOnly
-            value={envConfig.url || 'Not configured'}
-            className="bg-[#f1f5f9] border border-[#bdc9c6]/50 w-full px-4 py-2 text-xs font-mono text-[#6e7977] rounded-lg focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-[#3e4947] mb-1">
-            Supabase Anon Key
-          </label>
-          <input
-            type="password"
-            readOnly
-            value={envConfig.key ? '••••••••••••••••••••••••••••••••' : 'Not configured'}
-            className="bg-[#f1f5f9] border border-[#bdc9c6]/50 w-full px-4 py-2 text-xs font-mono text-[#6e7977] rounded-lg focus:outline-none"
-          />
-        </div>
-      </div>
 
       {/* Logout Action Card */}
       <div className="bg-white rounded-xl p-6 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] flex items-center justify-between">

@@ -77,7 +77,12 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
         });
 
         if (signInError) {
-          setError(signInError.message || 'Invalid email or password.');
+          const rawMessage = (signInError.message || '').toLowerCase();
+          if (rawMessage.includes('banned') || rawMessage.includes('disabled')) {
+            setError('Your Goodlife Fitness trainer account is currently inactive. Please contact the administrator.');
+          } else {
+            setError(signInError.message || 'Invalid email or password.');
+          }
           setLoading(false);
           return;
         }
@@ -107,7 +112,7 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
             </span>
           </div>
           <h1 className="text-2xl md:text-3xl font-semibold text-[#111c2d] mb-1">
-            FitTrack Pro
+            Goodlife Fitness
           </h1>
           <p className="text-base text-[#3e4947] tracking-wide">
             Precision Coaching
