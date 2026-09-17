@@ -1,0 +1,25 @@
+<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="How to measure forearm circumference">
+  <defs>
+    <style>
+      .skin { fill: #f4c9a1; }
+      .skin-shadow { fill: #e8a575; }
+    </style>
+  </defs>
+  <!-- forearm going up to fist -->
+  <path class="skin" d="M118,168 C150,150 190,140 218,115 C238,97 260,95 268,112 C275,128 260,140 240,148 C210,162 180,178 150,196 Z" />
+  <!-- fist -->
+  <ellipse class="skin" cx="252" cy="98" rx="34" ry="30" />
+  <path class="skin-shadow" d="M228,90 C232,80 244,74 254,76 C248,82 244,90 246,100 C238,98 230,96 228,90 Z" opacity="0.7" />
+  <!-- upper arm with bicep bulge -->
+  <path class="skin" d="M62,40 C56,34 70,24 92,26 C112,28 122,44 126,66 C132,96 146,120 160,140 C170,154 158,172 140,172 C122,172 110,160 100,140 C86,112 74,80 62,40 Z" />
+  <path class="skin-shadow" d="M96,90 C110,96 122,108 128,124 C118,128 104,124 96,112 C90,104 90,96 96,90 Z" opacity="0.55" />
+  <!-- tape around forearm, near the elbow bend -->
+  <ellipse cx="185" cy="152" rx="22" ry="34" fill="none" stroke="#f6d94a" stroke-width="17" transform="rotate(28 185 152)" />
+  <g stroke="#2e3646" stroke-width="2" transform="rotate(28 185 152)">
+    <line x1="163" y1="124" x2="207" y2="124" />
+    <line x1="160" y1="138" x2="210" y2="138" />
+    <line x1="159" y1="152" x2="211" y2="152" />
+    <line x1="160" y1="166" x2="210" y2="166" />
+    <line x1="163" y1="180" x2="207" y2="180" />
+  </g>
+</svg>

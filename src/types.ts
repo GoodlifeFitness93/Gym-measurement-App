@@ -8,6 +8,16 @@ export interface TrainerProfile {
   created_at?: string;
 }
 
+export type BiologicalSex = 'male' | 'female';
+
+export type BodyCompositionMethod =
+  | 'automatic'
+  | 'us_navy'
+  | 'manual_bia'
+  | 'jp3'
+  | 'jp4'
+  | 'jp7';
+
 export interface Client {
   id: string;
   trainer_id: string;
@@ -19,6 +29,13 @@ export interface Client {
   profile_photo_path?: string | null;
   created_at?: string;
   updated_at?: string;
+  // StartFit-style profile configuration
+  biological_sex?: BiologicalSex | null;
+  date_of_birth?: string | null; // date YYYY-MM-DD
+  height_cm?: number | null;
+  unit_system: 'metric' | 'imperial';
+  body_composition_method?: BodyCompositionMethod | null;
+  selected_perimeters: string[]; // PerimeterId[]
   // Computed fields
   last_checkin_date?: string | null;
   last_measurement_days_ago?: number | null;
@@ -33,16 +50,39 @@ export interface Measurement {
   trainer_id: string;
   measured_on: string; // date YYYY-MM-DD
   unit: 'metric' | 'imperial';
+  session_name?: string | null;
   weight?: number | null;
   body_fat_percent?: number | null;
   chest?: number | null;
   waist?: number | null;
   hips?: number | null;
   neck?: number | null;
-  arm?: number | null;
+  arm?: number | null; // Biceps
   thigh?: number | null;
+  shoulders?: number | null;
+  forearm?: number | null;
+  abdomen?: number | null;
+  gluteus?: number | null;
+  calf?: number | null;
   notes?: string | null;
   created_at?: string;
+}
+
+export interface CustomMeasure {
+  id: string;
+  trainer_id: string;
+  name: string;
+  measure_type: 'perimeter' | 'fold';
+  unit: string;
+  created_at?: string;
+}
+
+export interface CustomMeasureValue {
+  id?: string;
+  measurement_id: string;
+  custom_measure_id: string;
+  trainer_id: string;
+  value: number;
 }
 
 export type PhotoAngle = 'front' | 'back' | 'right_side' | 'left_side' | 'side';

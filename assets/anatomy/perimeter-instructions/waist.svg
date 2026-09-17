@@ -1,0 +1,34 @@
+<svg viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="How to measure waist circumference">
+  <defs>
+    <style>
+      .skin { fill: #f4c9a1; }
+      .teal { fill: #26a69a; }
+    </style>
+  </defs>
+  <!-- neck -->
+  <rect x="130" y="30" width="40" height="35" rx="6" class="skin" />
+  <!-- left arm -->
+  <path class="skin" d="M45,95 C42,90 55,78 75,78 L95,90 L85,260 C82,275 60,275 55,262 Z" />
+  <!-- right arm -->
+  <path class="skin" d="M255,95 C258,90 245,78 225,78 L205,90 L215,260 C218,275 240,275 245,262 Z" />
+  <!-- torso -->
+  <path class="skin" d="M85,78 C100,64 200,64 215,78 C230,95 236,140 232,190 C228,225 222,250 214,268 L86,268 C78,250 72,225 68,190 C64,140 70,95 85,78 Z" />
+  <!-- shorts -->
+  <path d="M84,255 L216,255 L228,320 L72,320 Z" fill="#0d2b2a" opacity="0.06" />
+  <path class="teal" d="M82,262 L218,262 L232,320 L68,320 Z" />
+  <rect x="78" y="255" width="144" height="16" rx="6" fill="#ffffff" />
+  <!-- tape at waist -->
+  <rect x="76" y="212" width="148" height="20" rx="4" fill="#f6d94a" />
+  <g stroke="#2e3646" stroke-width="2">
+    <line x1="88" y1="212" x2="88" y2="232" />
+    <line x1="102" y1="212" x2="102" y2="232" />
+    <line x1="116" y1="212" x2="116" y2="232" />
+    <line x1="130" y1="212" x2="130" y2="232" />
+    <line x1="144" y1="212" x2="144" y2="232" />
+    <line x1="158" y1="212" x2="158" y2="232" />
+    <line x1="172" y1="212" x2="172" y2="232" />
+    <line x1="186" y1="212" x2="186" y2="232" />
+    <line x1="200" y1="212" x2="200" y2="232" />
+  </g>
+  <rect x="208" y="212" width="10" height="20" rx="1.5" fill="#2e3646" />
+</svg>

@@ -1,7 +1,9 @@
 # Goodlife Fitness — Developer Context
 
-> **Updated**: 2026-09-16 | **Source**: Full repository + live Supabase project inspection during the Goodlife Fitness upgrade.
+> **Updated**: 2026-09-17 | **Source**: Full repository + live Supabase project inspection during the StartFit-style measurement workflow upgrade.
 > This document is for AI coding agents (Claude Code, etc.) to understand the codebase before making changes.
+
+**2026-09-17 upgrade summary**: black/orange theme (was teal/white "clinical"), a 7-step StartFit-style client creation wizard, configurable perimeters (11 body measurements) with an interactive male/female anatomy diagram and an 11-illustration Instructions modal, trainer-scoped custom measures (perimeter/fold), measurement session naming, and a fix for the Before/After photo slider that previously cropped uploaded photos. Body-composition **calculation** (US Navy, Jackson-Pollock, etc.) is intentionally **not implemented** — only the method *selection* is stored.
 
 ---
 
@@ -24,11 +26,14 @@
 | **Styling** | Tailwind CSS v4 (via `@tailwindcss/vite` plugin) | ^4.1.14 |
 | **Backend/DB** | Supabase (Auth, PostgreSQL, Storage, Edge Functions) | `@supabase/supabase-js` ^2.112.3 |
 | **ZIP generation** | `jszip` (Download All Photos) | ^3.10.1 |
-| **Icons** | Google Material Symbols Outlined (CDN font) | — |
+| **Icons** | Google Material Symbols Outlined (CDN font, pre-existing screens) **+** `lucide-react` (all screens/components added in the 2026-09-17 upgrade) | — / ^0.546.0 |
 | **Typography** | Inter (Google Fonts CDN) | — |
 
 ### Dependencies Removed (were unused)
-`@google/genai`, `express`, `dotenv`, `@types/express` were declared in `package.json` but had zero imports anywhere in `src/`. They have been removed. `motion` and `lucide-react` remain installed but still unused — safe to import if a future feature needs them.
+`@google/genai`, `express`, `dotenv`, `@types/express` were declared in `package.json` but had zero imports anywhere in `src/`. They have been removed. `motion` remains installed but unused. `lucide-react` is now used (see above) — do not add another icon library.
+
+### Two icon systems, intentionally
+Pre-existing screens (`Header`, `BottomNav`, `Dashboard`, `AuthScreen`, `ClientList`, `SettingsScreen`, `AdminDashboard`, `ShareReportModal`) still use the Material Symbols font (`<span className="material-symbols-outlined">`). New components from the 2026-09-17 upgrade (`NewClientWizard`, `PerimeterInstructionsModal`, `AnatomyDiagram`, `ClientSettingsTab`, and the new parts of `AddMeasurementModal`) use `lucide-react` per that phase's spec. This was a deliberate scope cut — do not do a mechanical icon-library migration across the whole app without being asked; it's cosmetic and carries regression risk.
 
 ---
 
@@ -75,18 +80,25 @@ Gym-measurement-App/
 ├── .env.example            → Template for required env vars (Supabase URL/key only)
 ├── .env                    → Local dev credentials (gitignored, never committed)
 ├── .gitignore              → Standard ignores (.env*, node_modules, dist)
-├── assets/icon.svg         → App icon/favicon (isolated so it can be swapped for a real logo later)
+├── assets/
+│   ├── icon.svg            → App icon/favicon (isolated so it can be swapped for a real logo later)
+│   └── anatomy/
+│       ├── male-front.svg, male-back.svg, female-front.svg, female-back.svg → interactive body diagrams
+│       └── perimeter-instructions/  → 11 files (neck/shoulders/chest/biceps/forearm/waist/abdomen/hip/gluteus/thigh/calf.svg)
 ├── bun.lock / package-lock.json → Lock files
 │
 └── src/
     ├── main.tsx            → React root mount + env var validation logging
     ├── App.tsx             → Root component: auth gating, role routing, navigation state, screen routing
-    ├── types.ts            → All TypeScript interfaces (Client, Measurement, TrainerProfile, ProgressPhoto, etc.)
-    ├── index.css            → Tailwind import + custom utility classes
+    ├── types.ts            → All TypeScript interfaces (Client, Measurement, TrainerProfile, ProgressPhoto, CustomMeasure, etc.)
+    ├── index.css            → Tailwind import, `@theme` block (black/orange design tokens), custom utility classes
     ├── vite-env.d.ts        → Vite env type declarations
     │
     ├── lib/
-    │   └── supabase.ts     → Supabase client init + env validation (no credential override mechanism)
+    │   ├── supabase.ts     → Supabase client init + env validation (no credential override mechanism)
+    │   ├── perimeters.ts   → Canonical 11-perimeter config (id/label/dbColumn) — single source of truth
+    │   ├── bodyComposition.ts → Body-composition method options + `CALCULATION_DEFERRED` flag
+    │   └── units.ts         → cm↔in / ft-in↔cm conversion helpers (canonical storage stays cm)
     │
     └── components/
         ├── AuthScreen.tsx           → Login / Sign-up form (trainer-only signup; friendly message for deactivated accounts)
@@ -94,17 +106,21 @@ Gym-measurement-App/
         ├── BottomNav.tsx            → Mobile bottom tab bar, trainer app only
         ├── Dashboard.tsx            → Trainer "command center": quick actions, needs-attention list, recent activity
         ├── ClientList.tsx           → Searchable/filterable client directory
-        ├── ClientProfile.tsx        → Client detail (overview, measurements, 4-angle photos + before/after, notes)
-        ├── AddClientModal.tsx       → New client creation form
-        ├── AddMeasurementModal.tsx  → Measurement entry form
-        ├── MeasurementProgress.tsx  → Real, data-driven measurement trend charts + logs
+        ├── ClientProfile.tsx        → Client detail (Overview, Measurements, Photos, Notes, **Settings** tabs)
+        ├── ClientSettingsTab.tsx    → Client Settings tab content: Profile edit + delete, Measurement Sessions, Fat Method, Perimeters, Custom Measures, Unit System
+        ├── AddMeasurementModal.tsx  → Measurement entry: core metrics + gated Perimeters section (Instructions modal, anatomy diagram, cm/in toggle) + custom fold measures
+        ├── PerimeterInstructionsModal.tsx → 11-illustration "how to measure" modal, opened from the Perimeters section
+        ├── AnatomyDiagram.tsx       → Reusable male/female front/back body diagram with clickable hotspots that focus the matching perimeter input
+        ├── MeasurementProgress.tsx  → Real, data-driven measurement trend charts + logs (primary bento metrics + secondary perimeter dropdown)
         ├── ShareReportModal.tsx     → Progress report preview + WhatsApp/copy sharing
-        ├── SettingsScreen.tsx       → Trainer profile + preferences + logout
+        ├── SettingsScreen.tsx       → Trainer profile + preferences + logout (trainer-level, not the per-client Settings tab)
+        ├── wizard/
+        │   └── NewClientWizard.tsx  → 7-step client creation flow (Name → Biological Sex → Body Composition Method → Select Perimeters → Unit System → Height → Date of Birth)
         └── admin/
             └── AdminDashboard.tsx   → Admin-only: trainer list, activate/deactivate with confirmation
 ```
 
-`src/components/SupabaseNotConfigured.tsx` has been **removed** — there is no public credential-entry screen.
+`src/components/SupabaseNotConfigured.tsx` and `src/components/AddClientModal.tsx` have both been **removed** — there is no public credential-entry screen, and client creation now goes through `wizard/NewClientWizard.tsx`.
 
 ---
 
@@ -125,10 +141,27 @@ Gym-measurement-App/
 - `ProgressPhoto.angle` is now `'front' | 'back' | 'right_side' | 'left_side' | 'side'` (`'side'` is a **legacy** value preserved for photos uploaded before the 4-angle system; never written by new uploads). `ProgressPhoto.taken_at` is the full editable timestamp; `taken_on` (date-only) is kept for backward compatibility.
 
 ### `src/components/ClientProfile.tsx`
-- Largest component. Manages client overview (real data-driven weight chart), measurement history, 4-angle progress photo gallery, before/after compare slider, photo upload with editable date/time, Download All Photos (ZIP), notes editing.
-- Photo upload: 4 explicit buttons (Front/Back/Right Side/Left Side) — the angle is fixed by which button was clicked, never typed. Each upload opens a small modal with a file preview and an editable `datetime-local` input defaulting to "now".
+- Largest component. Five tabs: Overview (real data-driven weight chart), Measurements (history list, now including the 5 additional perimeter columns), Photos (4-angle gallery + before/after), Notes, **Settings** (renders `ClientSettingsTab`).
+- Photo upload: 4 explicit buttons (Front/Back/Right Side/Left Side) — the angle is fixed by which button was clicked, never typed. Each upload opens a small modal (now `max-h-[90vh] overflow-y-auto` — it used to be possible for the submit button to render below a short viewport, unreachable) with a file preview and an editable `datetime-local` input defaulting to "now".
 - Before/After: explicit `<select>` pickers (not just first/last photo), with a warning if the two photos are different angles. The comparison slider is a native `<input type="range">` — draggable, touch-friendly, and keyboard-accessible by default, with a visible `aria-label` and percentage readout.
+- **Before/After complete-image fix (2026-09-17)**: both the Before and After `<img>` now render `absolute inset-0 w-full h-full object-contain` inside a `bg-ink` letterboxed container (was `object-cover object-top`, which cropped any photo not matching a fixed aspect ratio). The "Before" image is revealed via `clip-path: inset(0 X% 0 0)` applied directly to the image itself, not a shrinking wrapper div — the old wrapper-clip approach also had a width-mismatch bug (a hardcoded `w-[500px]` Before image inside a wrapper narrower than 500px on small screens), which this fix removes as a side effect. If touching this again: never reintroduce `object-cover` here, and never give the two compared images different base sizing.
 - Download All Photos: builds a ZIP client-side via `jszip`, organized `Client_Name/YYYY-MM-DD/Angle_HHmm.ext`, continues on individual photo fetch failures and reports which ones failed.
+
+### `src/components/wizard/NewClientWizard.tsx`
+- 7-step flow, single file with a `STEPS` array + switch (not one file per step). Inserts directly into `clients` on Finish with the extended schema (see §9). Step 4 (perimeters) defaults to all 11 selected. Step 5 (unit system) converts an already-entered height value live when switching metric/imperial so nothing silently gets reinterpreted.
+- Only collects the 7 spec'd fields. Phone/email/starting weight are edited afterward via `ClientSettingsTab`'s Profile section, not during the wizard.
+
+### `src/components/AddMeasurementModal.tsx`
+- Core Metrics (weight/body fat) unchanged. Perimeters section renders only the client's `selected_perimeters` + any trainer custom measures of type `perimeter`, gated by `client.selected_perimeters` (an array on the `clients` row, editable in `ClientSettingsTab`).
+- cm/in toggle: **converts already-entered values** when switched (see `handlePerimeterUnitChange`) — do not remove this; a naive unit-label swap without conversion would silently reinterpret a trainer's typed numbers under a different unit.
+- Renders `<AnatomyDiagram>` (collapsible) — clicking a hotspot calls `onHotspotClick` which focuses + scrolls to the matching perimeter `<input>` via a `ref` map keyed by `PerimeterId`.
+- "Instructions" button opens `<PerimeterInstructionsModal>` — does not lose any already-entered form values (it's a sibling overlay, not a re-render of the form).
+- Custom fold-type measures render in a separate "Custom Folds" card below Perimeters.
+- On submit: inserts into `measurements` (now including `session_name` and the 5 additional perimeter columns), then a second insert into `custom_measure_values` for any filled custom measure.
+
+### `src/components/ClientSettingsTab.tsx`
+- Profile (name/phone/email/sex/height/DOB/starting weight, Save Changes, Delete Client with a confirm dialog), Measurement Sessions (lists `measurements`, editable `session_name` per row, "Initial"/"Current" badges computed from date order — not stored), Fat Method (`clients.body_composition_method`), Perimeters (`clients.selected_perimeters` checkboxes), Custom Measures (CRUD on `custom_measures`, trainer-scoped), Unit System (`clients.unit_system`).
+- **Delete Client**: deletes `progress_photos` storage objects, then `progress_photos`/`measurements`/`clients` rows in that order (all client-scoped app-level deletes — this is not relying on DB cascade for the `clients→measurements/progress_photos` FKs, since cascade behavior on those pre-existing FKs was never confirmed).
 
 ### `src/components/admin/AdminDashboard.tsx`
 - Admin-only screen. Fetches the trainer list (with emails) via the `admin-manage-trainer` Edge Function's `list` action (emails live in `auth.users`, which the browser client cannot query directly).
@@ -151,7 +184,7 @@ No URL-based router. Navigation is controlled by `activeScreen` state in `App.ts
 | `add_measurement` | `AddMeasurementModal` | Log new measurement for selected client |
 | `measurement_progress` | `MeasurementProgress` | Measurement trend chart for selected client |
 | `share_report` | `ShareReportModal` | Preview and share progress report |
-| `add_client` | `AddClientModal` | Create new client profile |
+| `add_client` | `wizard/NewClientWizard` | 7-step new client creation flow |
 | `settings` | `SettingsScreen` | Trainer profile, preferences, logout |
 
 ---
@@ -229,7 +262,45 @@ Both are safe to expose in the browser by design (public/anon key, not the servi
 
 A trigger `on_auth_user_created` → `handle_new_trainer()` (SECURITY DEFINER, `search_path` pinned to `public`) auto-inserts a `trainer_profiles` row with `role='trainer', is_active=true` on every new `auth.users` signup.
 
-#### `clients`, `measurements` — unchanged from before.
+#### `clients` — extended 2026-09-17
+| Column | Type | Notes |
+|---|---|---|
+| `id`, `trainer_id`, `name`, `phone`, `email`, `starting_weight`, `goal_notes`, `profile_photo_path`, `created_at`, `updated_at` | — | unchanged |
+| `biological_sex` | text, nullable | `'male'` \| `'female'` — **new**, drives which `AnatomyDiagram` renders |
+| `date_of_birth` | date, nullable | **new** |
+| `height_cm` | numeric, nullable | **new** — canonical cm; converted for display only |
+| `unit_system` | text | `'metric'` \| `'imperial'`, default `'metric'` — **new**, per-client (separate from `trainer_profiles.unit_preference`, which is still unused elsewhere — see §18) |
+| `body_composition_method` | text, nullable | `'automatic'` \| `'us_navy'` \| `'manual_bia'` \| `'jp3'` \| `'jp4'` \| `'jp7'` — **new**, selection only, no calculation engine |
+| `selected_perimeters` | text[] | **new**, default = all 11 canonical ids from `src/lib/perimeters.ts`; drives which fields render in the Perimeters section |
+
+#### `measurements` — extended 2026-09-17
+| Column | Type | Notes |
+|---|---|---|
+| `id`, `client_id`, `trainer_id`, `measured_on`, `unit`, `weight`, `body_fat_percent`, `chest`, `waist`, `hips`, `neck`, `arm`, `thigh`, `notes`, `created_at` | — | unchanged. `arm` is displayed as **"Biceps"**, `hips` as **"Hip"** in the new perimeter UI — column names were NOT renamed, only relabeled in the frontend, so old data/queries keep working |
+| `shoulders`, `forearm`, `abdomen`, `gluteus`, `calf` | numeric, nullable | **new** — the 5 perimeters not already covered by the original 6 columns |
+| `session_name` | text, nullable | **new** — trainer-editable label ("Initial", "Week 4", "Current"); "Initial"/"Current" badges shown in `ClientSettingsTab` are *computed* from earliest/latest date, not stored |
+
+#### `custom_measures` — new table 2026-09-17
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | PK |
+| `trainer_id` | uuid | FK → `auth.users.id`, `ON DELETE CASCADE` |
+| `name` | text | trainer-defined label |
+| `measure_type` | text | `'perimeter'` \| `'fold'` |
+| `unit` | text | default `'cm'`, free text |
+| `created_at` | timestamptz | default `now()` |
+
+Trainer-scoped (not per-client) — matches every other table's flat `trainer_id` RLS pattern, and lets a trainer define a custom measure once and reuse it across all their clients.
+
+#### `custom_measure_values` — new table 2026-09-17
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | PK |
+| `measurement_id` | uuid | FK → `measurements.id`, `ON DELETE CASCADE` |
+| `custom_measure_id` | uuid | FK → `custom_measures.id`, `ON DELETE CASCADE` |
+| `trainer_id` | uuid | FK → `auth.users.id`, `ON DELETE CASCADE` — denormalized for flat RLS, same pattern as every other table |
+| `value` | numeric | |
+| `created_at` | timestamptz | default `now()` |
 
 #### `progress_photos`
 | Column | Type | Notes |
@@ -247,7 +318,8 @@ A trigger `on_auth_user_created` → `handle_new_trainer()` (SECURITY DEFINER, `
 RLS is enabled and correctly configured on all 4 tables:
 - `clients`, `measurements`, `progress_photos`: `ALL` policy `USING/WITH CHECK (auth.uid() = trainer_id)` — each trainer only sees their own data.
 - `trainer_profiles`: `SELECT`/`UPDATE` policies scoped to `auth.uid() = id` (own profile), **plus** a `SELECT` policy for admins using a `SECURITY DEFINER` helper function `public.is_active_admin(uid)` that lets active admins see every trainer's profile. This helper function pattern is required — a naive self-referencing policy (`EXISTS (SELECT 1 FROM trainer_profiles WHERE ...)` inside its own USING clause) causes **infinite recursion / 500 errors** in PostgREST. Do not write admin RLS policies that query the same table directly in their own USING clause; always route through a `SECURITY DEFINER` helper.
-- Storage (`storage.objects`, bucket `progress-photos`, private): policies scope `SELECT`/`INSERT`/`DELETE` to `(storage.foldername(name))[1] = auth.uid()::text` — trainers can only read/write their own folder.
+- Storage (`storage.objects`, bucket `progress-photos`, private): policies scope `SELECT`/`INSERT`/`DELETE` to `(storage.foldername(name))[1] = auth.uid()::text` — trainers can only read/write their own folder. **Direct SQL `DELETE` on `storage.objects` is blocked by a Supabase trigger** (`storage.protect_delete()`) — always delete storage objects via the Storage API (`supabase.storage.from(...).remove(...)`), never via `execute_sql`.
+- `custom_measures`, `custom_measure_values`: flat `ALL` policy `USING/WITH CHECK (auth.uid() = trainer_id)`, identical pattern to `clients`/`measurements`/`progress_photos`.
 
 ### Supabase Storage
 - **Bucket**: `progress-photos` (private)
@@ -364,7 +436,23 @@ No test runner configured.
 
 ## 17. Coding Conventions
 
-Unchanged from before: named-export `React.FC<Props>` components (except `App.tsx`), interfaces in `src/types.ts`, Tailwind utility classes inline with the existing hardcoded teal/clinical palette (`#005c55`, `#0f766e`, `#f9f9ff`, `#ffdad6`, etc.), Material Symbols icon font, snake_case DB columns / screen keys, component-local error state with retry banners.
+Named-export `React.FC<Props>` components (except `App.tsx`), interfaces in `src/types.ts`, snake_case DB columns / screen keys, component-local error state with retry banners.
+
+### Theme system (2026-09-17 — replaces the old hardcoded teal palette)
+`src/index.css` now has a Tailwind v4 `@theme` block defining real color utilities — this is the **only** place color tokens are defined; there is still no `tailwind.config.*` file (Tailwind v4 config is CSS-first):
+```
+--color-ink            → bg-ink / text-ink       (page background, near-black)
+--color-surface        → bg-surface               (card backgrounds)
+--color-surface-alt    → bg-surface-alt            (inputs, nested/hover surfaces)
+--color-border         → border-border
+--color-accent         → bg-accent / text-accent / border-accent   (Goodlife orange — buttons, active states, highlights)
+--color-accent-hover   → bg-accent-hover
+--color-text-muted     → text-text-muted           (secondary/label text; primary text just uses text-white)
+--color-danger         → text-danger / bg-danger
+--color-danger-bg      → bg-danger-bg              (error banners)
+--color-success        → text-success / bg-success
+```
+Use these utilities for any new UI — do not reintroduce arbitrary hex classes (`text-[#005c55]` etc.), and do not add a second token system. Orange is an accent, not a fill color — avoid solid-orange large surfaces (nav pills, backgrounds); prefer `accent/10`–`accent/15` tints for "selected" states, reserving solid `bg-accent` for primary CTAs. The `.input-clinical` utility class still exists and now points at the dark tokens.
 
 ---
 
@@ -377,8 +465,11 @@ Unchanged from before: named-export `React.FC<Props>` components (except `App.ts
 5. **Unit Preference Not Applied Globally** — unchanged pre-existing issue (out of scope for this upgrade): `unit_preference` is stored but measurements always display kg/cm regardless.
 6. **Clean Command Unix-Only** — unchanged.
 7. **Legacy `'side'` photo angle** — old rows use `angle='side'` with no way to determine left vs. right. The UI labels these "Side (Legacy)"; do not attempt to auto-reclassify them.
+8. **Two per-account unit fields that don't sync** — `trainer_profiles.unit_preference` (unused everywhere, pre-existing bug, still out of scope) and `clients.unit_system` (new, actually drives the wizard/perimeters/height cm↔in conversion). Don't assume they're the same thing or try to unify them without being asked — that's a larger refactor than this phase's scope.
+9. **Before/After slider image sizing** — both compared images must always use identical base sizing (`absolute inset-0 w-full h-full object-contain`); only the Before image's `clip-path` differs. Do not give either image a different width/positioning strategy — see the ClientProfile.tsx note in §5 for the exact bug this caused before.
+10. **Upload/confirmation modals need `max-h-[Xvh] overflow-y-auto`** — on short viewports a `fixed inset-0 ... flex items-center justify-center` overlay with unconstrained content height renders its bottom (often the submit button) off-screen with no way to scroll to it. Every new modal in this app should include a max-height + internal scroll, not just centering.
 
-Resolved by this upgrade (previously listed here, no longer applicable): the public Supabase credential-entry screen, hardcoded/fake chart data, and the `localStorage` credential override mechanism have all been removed.
+Resolved by earlier upgrades (previously listed here, no longer applicable): the public Supabase credential-entry screen, hardcoded/fake chart data, and the `localStorage` credential override mechanism have all been removed.
 
 ---
 
@@ -390,6 +481,8 @@ Resolved by this upgrade (previously listed here, no longer applicable): the pub
 | Profile photo upload | `client.profile_photo_path` exists in the schema but there is still no upload UI for it — unchanged from before. |
 | `photo_url` legacy column | No longer referenced by the frontend (removed along with the old signed-URL fallback logic), but may still exist in the DB as a legacy column. |
 | Leaked-password protection | Currently disabled at the Supabase Auth level (flagged by the security advisor) — a dashboard setting, not something this codebase controls. |
+| `clients→measurements`/`clients→progress_photos` FK cascade behavior | Never confirmed whether these pre-existing FKs have `ON DELETE CASCADE`. `ClientSettingsTab`'s Delete Client flow does NOT rely on it — it explicitly deletes photos/storage objects, measurements, then the client row, in that order. If you add another client-delete path, follow the same explicit order rather than assuming cascade. |
+| Anatomy diagram hotspot coordinates | Approximate percentage positions in `AnatomyDiagram.tsx`, tuned to look right on the specific silhouette SVGs in `assets/anatomy/`. If those SVGs are ever redrawn with different proportions, the hotspot coordinates will need re-tuning — they are not computed from the SVG geometry. |
 
 ---
 
@@ -398,7 +491,7 @@ Resolved by this upgrade (previously listed here, no longer applicable): the pub
 1. Preserve the existing navigation pattern (`activeScreen` state in `App.tsx`) for the trainer app. Admin screens live outside that state machine, gated by `trainerProfile.role`.
 2. Always use `getSupabase()` from `src/lib/supabase.ts`. Never create a new Supabase client instance directly, and never re-introduce a `localStorage` credential override.
 3. Always call `supabase.auth.getUser()` before mutations to get the current `trainer_id`. Never trust a client-supplied role or trainer_id for privileged operations — route those through the `admin-manage-trainer` Edge Function (or a new Edge Function following the same pattern) so the check happens server-side.
-4. Follow the existing color palette. Do not introduce new arbitrary colors.
+4. Follow the existing color palette — use the `@theme` tokens in `src/index.css` (§17), not arbitrary hex classes.
 5. Keep all TypeScript interfaces in `src/types.ts`.
 6. Maintain Supabase column name compatibility; update queries and `types.ts` together.
 7. Do not add URL-based routing without understanding the full navigation flow.
@@ -407,3 +500,6 @@ Resolved by this upgrade (previously listed here, no longer applicable): the pub
 10. Test on mobile viewport (320–768px) — `BottomNav` on `md:hidden`, desktop nav on `md:flex`.
 11. Follow the existing error pattern: component-local `error` state with retry banners, no toasts/global error handlers without explicit instruction.
 12. If modifying the 4-angle photo system, preserve the legacy `'side'` angle value for old rows — never delete or silently reclassify historical photo records.
+13. Body-composition **calculation** (US Navy, Jackson-Pollock formulas, BIA) is explicitly deferred — do not implement a formula or display a computed body-fat number unless specifically asked. `clients.body_composition_method` only stores the trainer's selected method.
+14. The 11 canonical perimeters live in `src/lib/perimeters.ts` (id/label/dbColumn) — reuse this config for any new perimeter-related UI rather than hardcoding the list again. Custom measures are trainer-scoped (`custom_measures.trainer_id`), not per-client.
+15. Any unit-toggle control (cm/in, metric/imperial) that sits next to already-entered numeric values must convert those values when the toggle changes (see `AddMeasurementModal.handlePerimeterUnitChange` and the wizard's `handleUnitChange`) — a label-only swap silently reinterprets the trainer's data.

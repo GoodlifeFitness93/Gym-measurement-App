@@ -195,16 +195,16 @@ export const Dashboard: React.FC<Props> = ({
     <div className="px-5 py-6 max-w-4xl mx-auto space-y-6 pb-28">
       {/* Greeting Section */}
       <section className="space-y-1">
-        <h2 className="text-2xl md:text-3xl font-semibold text-[#111c2d]">
+        <h2 className="text-2xl md:text-3xl font-semibold text-white">
           {getGreeting()}
         </h2>
-        <p className="text-base text-[#3e4947]">
+        <p className="text-base text-text-muted">
           Here's your overview for today.
         </p>
       </section>
 
       {error && (
-        <div className="p-4 bg-[#ffdad6] text-[#93000a] text-sm rounded-xl border border-[#ba1a1a]/20 flex justify-between items-center">
+        <div className="p-4 bg-danger-bg text-danger text-sm rounded-xl border border-danger/20 flex justify-between items-center">
           <span>{error}</span>
           <button
             onClick={fetchDashboardData}
@@ -219,30 +219,30 @@ export const Dashboard: React.FC<Props> = ({
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <button
           onClick={() => onNavigate('add_client')}
-          className="bg-[#005c55] hover:bg-[#0f766e] text-white rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-[0_4px_12px_rgba(0,92,85,0.15)] btn-press transition-colors"
+          className="bg-accent hover:bg-accent-hover text-white rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-[0_4px_12px_rgba(255,106,26,0.25)] btn-press transition-colors"
         >
           <span className="material-symbols-outlined text-2xl">person_add</span>
           <span className="text-xs font-semibold uppercase tracking-wider">New Client</span>
         </button>
         <button
           onClick={() => onNavigate('client_list')}
-          className="bg-white hover:bg-[#f0f3ff] text-[#111c2d] border border-[#bdc9c6]/60 rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-sm btn-press transition-colors"
+          className="bg-surface hover:bg-surface-alt text-white border border-border rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-sm btn-press transition-colors"
         >
-          <span className="material-symbols-outlined text-2xl text-[#005c55]">straighten</span>
+          <span className="material-symbols-outlined text-2xl text-accent">straighten</span>
           <span className="text-xs font-semibold uppercase tracking-wider">Add Measurement</span>
         </button>
         <button
           onClick={() => onNavigate('client_list')}
-          className="bg-white hover:bg-[#f0f3ff] text-[#111c2d] border border-[#bdc9c6]/60 rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-sm btn-press transition-colors"
+          className="bg-surface hover:bg-surface-alt text-white border border-border rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-sm btn-press transition-colors"
         >
-          <span className="material-symbols-outlined text-2xl text-[#005c55]">add_a_photo</span>
+          <span className="material-symbols-outlined text-2xl text-accent">add_a_photo</span>
           <span className="text-xs font-semibold uppercase tracking-wider">Add Photo</span>
         </button>
         <button
           onClick={() => onNavigate('client_list')}
-          className="bg-white hover:bg-[#f0f3ff] text-[#111c2d] border border-[#bdc9c6]/60 rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-sm btn-press transition-colors"
+          className="bg-surface hover:bg-surface-alt text-white border border-border rounded-xl p-4 flex flex-col items-center gap-1.5 shadow-sm btn-press transition-colors"
         >
-          <span className="material-symbols-outlined text-2xl text-[#005c55]">groups</span>
+          <span className="material-symbols-outlined text-2xl text-accent">groups</span>
           <span className="text-xs font-semibold uppercase tracking-wider">View Clients</span>
         </button>
       </section>
@@ -252,17 +252,17 @@ export const Dashboard: React.FC<Props> = ({
         {/* Active Clients */}
         <div
           onClick={() => onNavigate('client_list')}
-          className="bg-white rounded-xl border border-[#bdc9c6]/60 p-4 shadow-[0_4px_12px_rgba(15,118,110,0.05)] active:scale-[0.98] transition-transform cursor-pointer flex flex-col justify-between h-32 col-span-2 md:col-span-1 hover:border-[#005c55]"
+          className="bg-surface rounded-xl border border-border p-4 shadow-[0_4px_12px_rgba(0,0,0,0.25)] active:scale-[0.98] transition-transform cursor-pointer flex flex-col justify-between h-32 col-span-2 md:col-span-1 hover:border-accent"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-[#3e4947] uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
               Total Active Clients
             </span>
-            <span className="material-symbols-outlined text-[#005c55]" data-weight="fill">
+            <span className="material-symbols-outlined text-accent" data-weight="fill">
               groups
             </span>
           </div>
-          <div className="text-5xl font-bold text-[#111c2d]">
+          <div className="text-5xl font-bold text-white">
             {loading ? '—' : totalClientsCount}
           </div>
         </div>
@@ -270,17 +270,17 @@ export const Dashboard: React.FC<Props> = ({
         {/* Check-ins Due */}
         <div
           onClick={() => onNavigate('client_list')}
-          className="bg-white rounded-xl border border-[#bdc9c6]/60 p-4 shadow-[0_4px_12px_rgba(15,118,110,0.05)] active:scale-[0.98] transition-transform cursor-pointer flex flex-col justify-between h-32 relative overflow-hidden group hover:border-[#005c55]"
+          className="bg-surface rounded-xl border border-border p-4 shadow-[0_4px_12px_rgba(0,0,0,0.25)] active:scale-[0.98] transition-transform cursor-pointer flex flex-col justify-between h-32 relative overflow-hidden group hover:border-accent"
         >
           <div className="flex items-center justify-between relative z-10">
-            <span className="text-[11px] font-semibold text-[#3e4947] uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
               Check-ins Due
             </span>
-            <span className="material-symbols-outlined text-[#006a61]">
+            <span className="material-symbols-outlined text-accent">
               assignment_late
             </span>
           </div>
-          <div className="text-2xl md:text-3xl font-semibold text-[#111c2d] relative z-10">
+          <div className="text-2xl md:text-3xl font-semibold text-white relative z-10">
             {loading ? '—' : checkinsDueCount}
           </div>
         </div>
@@ -288,17 +288,17 @@ export const Dashboard: React.FC<Props> = ({
         {/* New Photos */}
         <div
           onClick={() => onNavigate('client_list')}
-          className="bg-white rounded-xl border border-[#bdc9c6]/60 p-4 shadow-[0_4px_12px_rgba(15,118,110,0.05)] active:scale-[0.98] transition-transform cursor-pointer flex flex-col justify-between h-32 relative overflow-hidden group hover:border-[#005c55]"
+          className="bg-surface rounded-xl border border-border p-4 shadow-[0_4px_12px_rgba(0,0,0,0.25)] active:scale-[0.98] transition-transform cursor-pointer flex flex-col justify-between h-32 relative overflow-hidden group hover:border-accent"
         >
           <div className="flex items-center justify-between relative z-10">
-            <span className="text-[11px] font-semibold text-[#3e4947] uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
               New Photos
             </span>
-            <span className="material-symbols-outlined text-[#4d5255]">
+            <span className="material-symbols-outlined text-text-muted">
               photo_camera
             </span>
           </div>
-          <div className="text-2xl md:text-3xl font-semibold text-[#111c2d] relative z-10">
+          <div className="text-2xl md:text-3xl font-semibold text-white relative z-10">
             {loading ? '—' : newPhotosCount}
           </div>
         </div>
@@ -307,23 +307,23 @@ export const Dashboard: React.FC<Props> = ({
       {/* Needs Update Section */}
       <section className="space-y-3">
         <div>
-          <h3 className="text-xl font-semibold text-[#111c2d]">Needs Update</h3>
-          <p className="text-sm text-[#3e4947]">Measurements &gt; 2 weeks old</p>
+          <h3 className="text-xl font-semibold text-white">Needs Update</h3>
+          <p className="text-sm text-text-muted">Measurements &gt; 2 weeks old</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border shadow-[0_4px_12px_rgba(0,0,0,0.25)] overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-sm text-[#6e7977] flex justify-center items-center gap-2">
-              <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-[#005c55] border-t-transparent" />
+            <div className="p-8 text-center text-sm text-text-muted flex justify-center items-center gap-2">
+              <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-accent border-t-transparent" />
               Loading client update status...
             </div>
           ) : needsUpdateClients.length === 0 ? (
             <div className="p-8 text-center">
-              <span className="material-symbols-outlined text-3xl text-[#005c55] mb-2">
+              <span className="material-symbols-outlined text-3xl text-accent mb-2">
                 check_circle
               </span>
-              <p className="text-sm font-semibold text-[#111c2d]">All clients up to date!</p>
-              <p className="text-xs text-[#6e7977] mt-1">
+              <p className="text-sm font-semibold text-white">All clients up to date!</p>
+              <p className="text-xs text-text-muted mt-1">
                 Every client has logged a measurement within the last 14 days.
               </p>
             </div>
@@ -337,12 +337,12 @@ export const Dashboard: React.FC<Props> = ({
                     onSelectClient(client);
                     onNavigate('client_profile');
                   }}
-                  className={`flex items-center justify-between p-4 hover:bg-[#f0f3ff] transition-colors cursor-pointer active:bg-[#e7eeff] ${
-                    !isLast ? 'border-b border-[#bdc9c6]/40' : ''
+                  className={`flex items-center justify-between p-4 hover:bg-surface-alt transition-colors cursor-pointer active:bg-surface-alt ${
+                    !isLast ? 'border-b border-border' : ''
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-[#d8e3fb] flex items-center justify-center font-bold text-[#005c55] overflow-hidden shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-surface-alt flex items-center justify-center font-bold text-accent overflow-hidden shrink-0">
                       {client.profile_photo_path ? (
                         <img
                           src={client.profile_photo_path}
@@ -361,10 +361,10 @@ export const Dashboard: React.FC<Props> = ({
                       )}
                     </div>
                     <div>
-                      <p className="text-base font-semibold text-[#111c2d]">
+                      <p className="text-base font-semibold text-white">
                         {client.name}
                       </p>
-                      <p className="text-sm text-[#3e4947]">
+                      <p className="text-sm text-text-muted">
                         {client.last_measurement_days_ago !== null && client.last_measurement_days_ago !== undefined
                           ? `Last updated ${client.last_measurement_days_ago} days ago`
                           : 'No measurements logged yet'}
@@ -372,7 +372,7 @@ export const Dashboard: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div className="bg-[#ffdad6] text-[#93000a] rounded-full p-2 flex items-center justify-center shrink-0">
+                  <div className="bg-danger-bg text-danger rounded-full p-2 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-lg">flag</span>
                   </div>
                 </div>
@@ -384,12 +384,12 @@ export const Dashboard: React.FC<Props> = ({
 
       {/* Recent Activity */}
       <section className="space-y-3">
-        <h3 className="text-xl font-semibold text-[#111c2d]">Recent Activity</h3>
-        <div className="bg-white rounded-xl border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] overflow-hidden">
+        <h3 className="text-xl font-semibold text-white">Recent Activity</h3>
+        <div className="bg-surface rounded-xl border border-border shadow-[0_4px_12px_rgba(0,0,0,0.25)] overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-sm text-[#6e7977]">Loading activity...</div>
+            <div className="p-8 text-center text-sm text-text-muted">Loading activity...</div>
           ) : recentActivity.length === 0 ? (
-            <div className="p-8 text-center text-sm text-[#6e7977]">
+            <div className="p-8 text-center text-sm text-text-muted">
               No recent activity yet — add a client to get started.
             </div>
           ) : (
@@ -406,16 +406,16 @@ export const Dashboard: React.FC<Props> = ({
                       onNavigate('client_profile');
                     }
                   }}
-                  className={`flex items-center gap-3 p-4 hover:bg-[#f0f3ff] transition-colors ${
+                  className={`flex items-center gap-3 p-4 hover:bg-surface-alt transition-colors ${
                     client ? 'cursor-pointer' : ''
-                  } ${idx !== recentActivity.length - 1 ? 'border-b border-[#bdc9c6]/40' : ''}`}
+                  } ${idx !== recentActivity.length - 1 ? 'border-b border-border' : ''}`}
                 >
-                  <div className="w-9 h-9 rounded-full bg-[#e7eeff] flex items-center justify-center text-[#005c55] shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-surface-alt flex items-center justify-center text-accent shrink-0">
                     <span className="material-symbols-outlined text-lg">{icon}</span>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#111c2d] truncate">{item.clientName}</p>
-                    <p className="text-xs text-[#3e4947]">{item.description}</p>
+                    <p className="text-sm font-semibold text-white truncate">{item.clientName}</p>
+                    <p className="text-xs text-text-muted">{item.description}</p>
                   </div>
                 </div>
               );
@@ -427,7 +427,7 @@ export const Dashboard: React.FC<Props> = ({
       {/* Floating Action Button */}
       <button
         onClick={() => onNavigate('add_client')}
-        className="fixed bottom-24 right-5 z-40 bg-[#005c55] text-white font-semibold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-[0_4px_14px_rgba(0,92,85,0.35)] flex items-center space-x-2 active:scale-95 transition-all hover:bg-[#0f766e] md:bottom-8 md:right-8"
+        className="fixed bottom-24 right-5 z-40 bg-accent text-white font-semibold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-[0_4px_14px_rgba(255,106,26,0.35)] flex items-center space-x-2 active:scale-95 transition-all hover:bg-accent-hover md:bottom-8 md:right-8"
       >
         <span className="material-symbols-outlined text-lg">add</span>
         <span>Add Client</span>

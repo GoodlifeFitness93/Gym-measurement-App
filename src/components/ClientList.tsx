@@ -125,18 +125,18 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
   return (
     <div className="flex-1 w-full max-w-3xl mx-auto pb-24 flex flex-col min-h-screen font-['Inter',sans-serif]">
       {/* Search & Filter Section */}
-      <section className="px-4 py-3 sticky top-[57px] z-40 bg-[#f9f9ff]/95 backdrop-blur-sm border-b border-[#bdc9c6]/30">
+      <section className="px-4 py-3 sticky top-[57px] z-40 bg-ink/95 backdrop-blur-sm border-b border-border">
         {/* Search Bar */}
         <div className="relative w-full mb-3">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span className="material-symbols-outlined text-[#6e7977]">search</span>
+            <span className="material-symbols-outlined text-text-muted">search</span>
           </div>
           <input
             type="text"
             placeholder="Search clients by name or goal..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#f0f3ff] text-[#111c2d] text-base border-b-2 border-transparent focus:border-[#005c55] focus:ring-0 focus:outline-none rounded-t-lg px-4 py-2.5 pl-10 transition-colors placeholder:text-[#bdc9c6]"
+            className="w-full bg-surface-alt text-white text-base border-b-2 border-transparent focus:border-accent focus:ring-0 focus:outline-none rounded-t-lg px-4 py-2.5 pl-10 transition-colors placeholder:text-text-muted"
           />
         </div>
 
@@ -146,8 +146,8 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
             onClick={() => setFilterTag('all')}
             className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-colors ${
               filterTag === 'all'
-                ? 'bg-[#0f766e] text-[#a3faef]'
-                : 'bg-white border border-[#bdc9c6] text-[#3e4947] hover:bg-[#e7eeff]'
+                ? 'bg-accent text-white'
+                : 'bg-surface border border-border text-text-muted hover:bg-surface-alt'
             }`}
           >
             All ({clients.length})
@@ -156,8 +156,8 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
             onClick={() => setFilterTag('active')}
             className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-colors ${
               filterTag === 'active'
-                ? 'bg-[#0f766e] text-[#a3faef]'
-                : 'bg-white border border-[#bdc9c6] text-[#3e4947] hover:bg-[#e7eeff]'
+                ? 'bg-accent text-white'
+                : 'bg-surface border border-border text-text-muted hover:bg-surface-alt'
             }`}
           >
             Active
@@ -166,8 +166,8 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
             onClick={() => setFilterTag('needs_update')}
             className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-colors ${
               filterTag === 'needs_update'
-                ? 'bg-[#0f766e] text-[#a3faef]'
-                : 'bg-white border border-[#bdc9c6] text-[#3e4947] hover:bg-[#e7eeff]'
+                ? 'bg-accent text-white'
+                : 'bg-surface border border-border text-text-muted hover:bg-surface-alt'
             }`}
           >
             Needs Update
@@ -176,7 +176,7 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
       </section>
 
       {error && (
-        <div className="mx-4 mt-4 p-4 bg-[#ffdad6] text-[#93000a] text-sm rounded-xl border border-[#ba1a1a]/20 flex justify-between items-center">
+        <div className="mx-4 mt-4 p-4 bg-danger-bg text-danger text-sm rounded-xl border border-danger/20 flex justify-between items-center">
           <span>{error}</span>
           <button onClick={fetchClients} className="text-xs font-bold underline">
             Retry
@@ -187,25 +187,25 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
       {/* Client List */}
       <section className="flex-1 px-4 space-y-3 mt-3">
         {loading ? (
-          <div className="p-12 text-center text-sm text-[#6e7977] flex justify-center items-center gap-2">
-            <span className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-[#005c55] border-t-transparent" />
+          <div className="p-12 text-center text-sm text-text-muted flex justify-center items-center gap-2">
+            <span className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-accent border-t-transparent" />
             Loading client directory...
           </div>
         ) : filteredClients.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-xl border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.02)] my-4">
-            <span className="material-symbols-outlined text-4xl text-[#005c55] mb-2">
+          <div className="p-12 text-center bg-surface rounded-xl border border-border shadow-[0_4px_12px_rgba(0,0,0,0.15)] my-4">
+            <span className="material-symbols-outlined text-4xl text-accent mb-2">
               group_add
             </span>
-            <h3 className="text-lg font-semibold text-[#111c2d]">
+            <h3 className="text-lg font-semibold text-white">
               {searchQuery ? 'No matching clients found' : 'No clients yet — add your first client'}
             </h3>
-            <p className="text-xs text-[#6e7977] mt-1 mb-4">
+            <p className="text-xs text-text-muted mt-1 mb-4">
               {searchQuery ? 'Try clearing your search term.' : 'Start tracking client measurements, progress photos and reports.'}
             </p>
             {!searchQuery && (
               <button
                 onClick={() => onNavigate('add_client')}
-                className="bg-[#005c55] hover:bg-[#0f766e] text-white px-5 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider btn-press"
+                className="bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider btn-press"
               >
                 + Add Client
               </button>
@@ -223,11 +223,11 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
                   onSelectClient(client);
                   onNavigate('client_profile');
                 }}
-                className="bg-white rounded-xl border border-[#bdc9c6]/60 p-4 flex items-center gap-4 shadow-[0_4px_12px_rgba(15,118,110,0.02)] hover:shadow-[0_4px_16px_rgba(15,118,110,0.08)] active:scale-[0.99] transition-all cursor-pointer"
+                className="bg-surface rounded-xl border border-border p-4 flex items-center gap-4 shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.3)] active:scale-[0.99] transition-all cursor-pointer"
               >
                 {/* Avatar with Status Dot */}
                 <div className="relative shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-[#dee8ff] overflow-hidden bg-[#d8e3fb] flex items-center justify-center font-bold text-[#005c55]">
+                  <div className="w-12 h-12 rounded-full border border-border overflow-hidden bg-surface-alt flex items-center justify-center font-bold text-accent">
                     {client.profile_photo_path ? (
                       <img
                         src={client.profile_photo_path}
@@ -246,24 +246,24 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
                     )}
                   </div>
                   <div
-                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-                      isNeed ? 'bg-[#ba1a1a]' : 'bg-[#006a61]'
+                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface ${
+                      isNeed ? 'bg-danger' : 'bg-success'
                     }`}
                   />
                 </div>
 
                 {/* Client Info */}
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-semibold text-[#111c2d] truncate pb-0.5">
+                  <h2 className="text-lg font-semibold text-white truncate pb-0.5">
                     {client.name}
                   </h2>
                   {isNeed ? (
-                    <div className="flex items-center gap-1 text-sm text-[#ba1a1a]">
+                    <div className="flex items-center gap-1 text-sm text-danger">
                       <span className="material-symbols-outlined text-[16px]">warning</span>
                       <span>Needs Update</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 text-sm text-[#3e4947]">
+                    <div className="flex items-center gap-1 text-sm text-text-muted">
                       <span className="material-symbols-outlined text-[16px]">calendar_today</span>
                       <span>Check-in: {client.last_checkin_date}</span>
                     </div>
@@ -273,38 +273,38 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
                 {/* Weight Change Badge */}
                 <div className="shrink-0 flex flex-col items-end">
                   {wChange === null || wChange === undefined ? (
-                    <div className="bg-[#d8e3fb] px-3 py-1 rounded-full flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-[#3e4947]">
+                    <div className="bg-surface-alt px-3 py-1 rounded-full flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-text-muted">
                         drag_handle
                       </span>
-                      <span className="text-xs font-semibold text-[#3e4947] tracking-wider">
+                      <span className="text-xs font-semibold text-text-muted tracking-wider">
                         0.0kg
                       </span>
                     </div>
                   ) : wChange < 0 ? (
-                    <div className="bg-[#86f2e4] px-3 py-1 rounded-full flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-[#006f66]">
+                    <div className="bg-accent/15 px-3 py-1 rounded-full flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-accent">
                         trending_down
                       </span>
-                      <span className="text-xs font-semibold text-[#006f66] tracking-wider">
+                      <span className="text-xs font-semibold text-accent tracking-wider">
                         {wChange}kg
                       </span>
                     </div>
                   ) : wChange > 0 ? (
-                    <div className="bg-[#ffdad6] px-3 py-1 rounded-full flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-[#93000a]">
+                    <div className="bg-danger-bg px-3 py-1 rounded-full flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-danger">
                         trending_up
                       </span>
-                      <span className="text-xs font-semibold text-[#93000a] tracking-wider">
+                      <span className="text-xs font-semibold text-danger tracking-wider">
                         +{wChange}kg
                       </span>
                     </div>
                   ) : (
-                    <div className="bg-[#d8e3fb] px-3 py-1 rounded-full flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-[#3e4947]">
+                    <div className="bg-surface-alt px-3 py-1 rounded-full flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-text-muted">
                         drag_handle
                       </span>
-                      <span className="text-xs font-semibold text-[#3e4947] tracking-wider">
+                      <span className="text-xs font-semibold text-text-muted tracking-wider">
                         0.0kg
                       </span>
                     </div>
@@ -319,7 +319,7 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
       {/* Floating Action Button */}
       <button
         onClick={() => onNavigate('add_client')}
-        className="fixed bottom-24 right-5 z-40 bg-[#005c55] text-white font-semibold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-[0_4px_14px_rgba(0,92,85,0.35)] flex items-center space-x-2 active:scale-95 transition-all hover:bg-[#0f766e] md:bottom-8 md:right-8"
+        className="fixed bottom-24 right-5 z-40 bg-accent text-white font-semibold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-[0_4px_14px_rgba(255,106,26,0.35)] flex items-center space-x-2 active:scale-95 transition-all hover:bg-accent-hover md:bottom-8 md:right-8"
       >
         <span className="material-symbols-outlined text-lg">add</span>
         <span>Add Client</span>

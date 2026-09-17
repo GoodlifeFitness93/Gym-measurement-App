@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
 import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, ProgressPhoto, PhotoAngle, ActiveScreen } from '../types';
+import { ClientSettingsTab } from './ClientSettingsTab';
 
 interface Props {
   client: Client;
@@ -18,6 +19,20 @@ const ANGLE_LABELS: Record<PhotoAngle, string> = {
 };
 
 const UPLOAD_ANGLES: PhotoAngle[] = ['front', 'back', 'right_side', 'left_side'];
+
+const PERIMETER_FIELDS: { key: keyof Measurement; label: string }[] = [
+  { key: 'chest', label: 'Chest' },
+  { key: 'waist', label: 'Waist' },
+  { key: 'hips', label: 'Hip' },
+  { key: 'neck', label: 'Neck' },
+  { key: 'arm', label: 'Biceps' },
+  { key: 'forearm', label: 'Forearm' },
+  { key: 'shoulders', label: 'Shoulders' },
+  { key: 'abdomen', label: 'Abdomen' },
+  { key: 'gluteus', label: 'Gluteus' },
+  { key: 'thigh', label: 'Thigh' },
+  { key: 'calf', label: 'Calf' },
+];
 
 const KOLKATA_DATE = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'Asia/Kolkata',
@@ -65,7 +80,7 @@ export const ClientProfile: React.FC<Props> = ({
   onNavigate,
   onRefreshClient,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'measurements' | 'photos' | 'notes'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'measurements' | 'photos' | 'notes' | 'settings'>('overview');
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -418,8 +433,8 @@ export const ClientProfile: React.FC<Props> = ({
   return (
     <div className="px-5 py-6 max-w-4xl mx-auto space-y-6 pb-28 font-['Inter',sans-serif]">
       {/* Profile Header Card */}
-      <section className="bg-white rounded-xl p-4 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] flex items-center gap-4">
-        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden shrink-0 border-2 border-[#0f766e] bg-[#d8e3fb] flex items-center justify-center font-bold text-xl text-[#005c55]">
+      <section className="bg-surface rounded-xl p-4 border border-border flex items-center gap-4">
+        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden shrink-0 border-2 border-accent bg-surface-alt flex items-center justify-center font-bold text-xl text-accent">
           {client.profile_photo_path ? (
             <img
               src={client.profile_photo_path}
@@ -439,10 +454,10 @@ export const ClientProfile: React.FC<Props> = ({
         </div>
 
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl md:text-2xl font-semibold text-[#111c2d] mb-1 truncate">
+          <h2 className="text-xl md:text-2xl font-semibold text-white mb-1 truncate">
             {client.name}
           </h2>
-          <div className="flex flex-col gap-1 text-sm text-[#3e4947]">
+          <div className="flex flex-col gap-1 text-sm text-text-muted">
             <p className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px]">calendar_today</span>
               <span>Started: {startedDateFormatted}</span>
@@ -457,91 +472,61 @@ export const ClientProfile: React.FC<Props> = ({
 
       {/* Key Stats Row */}
       <section className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl p-3 md:p-4 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] flex flex-col items-center justify-center text-center">
-          <span className="text-[11px] font-semibold text-[#3e4947] mb-1 uppercase tracking-wider">
+        <div className="bg-surface rounded-xl p-3 md:p-4 border border-border flex flex-col items-center justify-center text-center">
+          <span className="text-[11px] font-semibold text-text-muted mb-1 uppercase tracking-wider">
             Start Weight
           </span>
-          <span className="text-lg md:text-xl font-bold text-[#111c2d]">
+          <span className="text-lg md:text-xl font-bold text-white">
             {startWeight ? `${startWeight} kg` : '—'}
           </span>
         </div>
 
-        <div className="bg-white rounded-xl p-3 md:p-4 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] flex flex-col items-center justify-center text-center">
-          <span className="text-[11px] font-semibold text-[#3e4947] mb-1 uppercase tracking-wider">
+        <div className="bg-surface rounded-xl p-3 md:p-4 border border-border flex flex-col items-center justify-center text-center">
+          <span className="text-[11px] font-semibold text-text-muted mb-1 uppercase tracking-wider">
             Current
           </span>
-          <span className="text-lg md:text-xl font-bold text-[#111c2d]">
+          <span className="text-lg md:text-xl font-bold text-white">
             {currentWeight ? `${currentWeight} kg` : '—'}
           </span>
         </div>
 
-        <div className="bg-[#86f2e4]/30 rounded-xl p-3 md:p-4 border border-[#006f66]/20 shadow-[0_4px_12px_rgba(15,118,110,0.05)] flex flex-col items-center justify-center text-center">
-          <span className="text-[11px] font-semibold text-[#006f66] mb-1 uppercase tracking-wider">
+        <div className="bg-accent/10 rounded-xl p-3 md:p-4 border border-accent/20 flex flex-col items-center justify-center text-center">
+          <span className="text-[11px] font-semibold text-accent mb-1 uppercase tracking-wider">
             Change
           </span>
-          <span className="text-lg md:text-xl font-bold text-[#006f66]">
+          <span className="text-lg md:text-xl font-bold text-accent">
             {weightChange !== null ? `${weightChange > 0 ? '+' : ''}${weightChange} kg` : '0 kg'}
           </span>
         </div>
       </section>
 
       {/* Tab Bar */}
-      <nav className="flex border-b border-[#bdc9c6]/60 overflow-x-auto no-scrollbar">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-            activeTab === 'overview'
-              ? 'text-[#005c55] border-b-2 border-[#005c55]'
-              : 'text-[#3e4947] hover:text-[#111c2d]'
-          }`}
-        >
-          Overview
-        </button>
-
-        <button
-          onClick={() => setActiveTab('measurements')}
-          className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-            activeTab === 'measurements'
-              ? 'text-[#005c55] border-b-2 border-[#005c55]'
-              : 'text-[#3e4947] hover:text-[#111c2d]'
-          }`}
-        >
-          Measurements ({measurements.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('photos')}
-          className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-            activeTab === 'photos'
-              ? 'text-[#005c55] border-b-2 border-[#005c55]'
-              : 'text-[#3e4947] hover:text-[#111c2d]'
-          }`}
-        >
-          Photos ({photos.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('notes')}
-          className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-            activeTab === 'notes'
-              ? 'text-[#005c55] border-b-2 border-[#005c55]'
-              : 'text-[#3e4947] hover:text-[#111c2d]'
-          }`}
-        >
-          Notes
-        </button>
+      <nav className="flex border-b border-border overflow-x-auto no-scrollbar">
+        {(['overview', 'measurements', 'photos', 'notes', 'settings'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-colors capitalize ${
+              activeTab === tab
+                ? 'text-accent border-b-2 border-accent'
+                : 'text-text-muted hover:text-white'
+            }`}
+          >
+            {tab === 'measurements' ? `Measurements (${measurements.length})` : tab === 'photos' ? `Photos (${photos.length})` : tab}
+          </button>
+        ))}
       </nav>
 
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
         <section className="space-y-6">
           {/* Chart Card */}
-          <div className="bg-white rounded-xl p-4 md:p-6 border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)]">
+          <div className="bg-surface rounded-xl p-4 md:p-6 border border-border">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-[#111c2d]">Weight Progress</h3>
+              <h3 className="text-xl font-semibold text-white">Weight Progress</h3>
               <button
                 onClick={() => onNavigate('measurement_progress')}
-                className="text-xs font-semibold text-[#005c55] hover:underline uppercase tracking-wider"
+                className="text-xs font-semibold text-accent hover:underline uppercase tracking-wider"
               >
                 Detailed Chart →
               </button>
@@ -549,12 +534,12 @@ export const ClientProfile: React.FC<Props> = ({
 
             {weightChartPoints ? (
               <div className="h-52 w-full relative flex items-end pt-4">
-                <div className="ml-2 w-full h-full relative border-b border-[#bdc9c6]/50 flex items-end">
+                <div className="ml-2 w-full h-full relative border-b border-border flex items-end">
                   <svg className="absolute top-0 left-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
                     <polyline
                       fill="none"
                       points={weightChartPoints.map((p) => `${p.x},${p.y}`).join(' ')}
-                      stroke="#005c55"
+                      stroke="#ff6a1a"
                       strokeWidth="2.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -564,7 +549,7 @@ export const ClientProfile: React.FC<Props> = ({
                   {weightChartPoints.map((p, idx) => (
                     <div
                       key={idx}
-                      className="absolute w-2.5 h-2.5 bg-white border-2 border-[#005c55] rounded-full -translate-x-1/2 translate-y-1/2"
+                      className="absolute w-2.5 h-2.5 bg-surface border-2 border-accent rounded-full -translate-x-1/2 translate-y-1/2"
                       style={{ left: `${p.x}%`, bottom: `${100 - p.y}%` }}
                       title={`${p.value} kg`}
                     />
@@ -572,7 +557,7 @@ export const ClientProfile: React.FC<Props> = ({
                 </div>
               </div>
             ) : (
-              <div className="h-32 w-full flex items-center justify-center text-center text-sm text-[#6e7977]">
+              <div className="h-32 w-full flex items-center justify-center text-center text-sm text-text-muted">
                 Log at least two weight measurements to see a progress chart.
               </div>
             )}
@@ -582,7 +567,7 @@ export const ClientProfile: React.FC<Props> = ({
           <div className="pt-2 flex justify-center">
             <button
               onClick={() => onNavigate('share_report')}
-              className="bg-[#005c55] hover:bg-[#0f766e] text-white font-semibold py-3.5 px-8 rounded-full shadow-md btn-press flex items-center justify-center gap-2 w-full md:w-auto"
+              className="bg-accent hover:bg-accent-hover text-white font-semibold py-3.5 px-8 rounded-full btn-press flex items-center justify-center gap-2 w-full md:w-auto"
             >
               <span className="material-symbols-outlined text-lg">ios_share</span>
               Share Progress Report
@@ -595,17 +580,17 @@ export const ClientProfile: React.FC<Props> = ({
       {activeTab === 'measurements' && (
         <section className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-semibold text-[#111c2d]">Logged Measurements</h3>
+            <h3 className="text-xl font-semibold text-white">Logged Measurements</h3>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onNavigate('measurement_progress')}
-                className="text-xs font-semibold uppercase tracking-wider text-[#005c55] border border-[#005c55] px-3 py-1.5 rounded-lg hover:bg-[#e7eeff]"
+                className="text-xs font-semibold uppercase tracking-wider text-accent border border-accent px-3 py-1.5 rounded-lg hover:bg-accent/10"
               >
                 Graph View
               </button>
               <button
                 onClick={() => onNavigate('add_measurement')}
-                className="text-xs font-semibold uppercase tracking-wider bg-[#005c55] text-white px-3 py-1.5 rounded-lg hover:bg-[#0f766e]"
+                className="text-xs font-semibold uppercase tracking-wider bg-accent text-white px-3 py-1.5 rounded-lg hover:bg-accent-hover"
               >
                 + Add Entry
               </button>
@@ -613,20 +598,20 @@ export const ClientProfile: React.FC<Props> = ({
           </div>
 
           {measurements.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center border border-[#bdc9c6]/60">
-              <span className="material-symbols-outlined text-3xl text-[#005c55] mb-2">
+            <div className="bg-surface rounded-xl p-8 text-center border border-border">
+              <span className="material-symbols-outlined text-3xl text-accent mb-2">
                 straighten
               </span>
-              <p className="text-sm font-semibold text-[#111c2d]">No measurements recorded yet</p>
+              <p className="text-sm font-semibold text-white">No measurements recorded yet</p>
               <button
                 onClick={() => onNavigate('add_measurement')}
-                className="mt-3 bg-[#005c55] text-white text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-lg"
+                className="mt-3 bg-accent text-white text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-lg"
               >
                 Log First Measurement
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-[#bdc9c6]/60 divide-y divide-[#bdc9c6]/40 overflow-hidden shadow-sm">
+            <div className="bg-surface rounded-xl border border-border divide-y divide-border overflow-hidden">
               {measurements.map((m, idx) => {
                 const dateStr = m.measured_on || m.created_at;
                 const formattedDate = dateStr
@@ -638,36 +623,32 @@ export const ClientProfile: React.FC<Props> = ({
                   : `Entry #${idx + 1}`;
 
                 return (
-                  <div key={m.id || idx} className="p-4 hover:bg-[#f0f3ff] transition-colors">
+                  <div key={m.id || idx} className="p-4 hover:bg-surface-alt transition-colors">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-bold text-[#005c55]">{formattedDate}</span>
-                      <span className="text-base font-bold text-[#111c2d]">
+                      <span className="text-sm font-bold text-accent">
+                        {formattedDate}
+                        {m.session_name && (
+                          <span className="ml-2 text-[10px] font-bold uppercase bg-accent/15 text-accent px-1.5 py-0.5 rounded normal-case">
+                            {m.session_name}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-base font-bold text-white">
                         {m.weight !== null && m.weight !== undefined ? `${m.weight} kg` : '—'}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-[#3e4947]">
-                      {m.body_fat_percent !== null && (
-                        <div>Body Fat: <span className="font-semibold text-[#111c2d]">{m.body_fat_percent}%</span></div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-text-muted">
+                      {m.body_fat_percent !== null && m.body_fat_percent !== undefined && (
+                        <div>Body Fat: <span className="font-semibold text-white">{m.body_fat_percent}%</span></div>
                       )}
-                      {m.chest !== null && (
-                        <div>Chest: <span className="font-semibold text-[#111c2d]">{m.chest} cm</span></div>
-                      )}
-                      {m.waist !== null && (
-                        <div>Waist: <span className="font-semibold text-[#111c2d]">{m.waist} cm</span></div>
-                      )}
-                      {m.hips !== null && (
-                        <div>Hips: <span className="font-semibold text-[#111c2d]">{m.hips} cm</span></div>
-                      )}
-                      {m.neck !== null && (
-                        <div>Neck: <span className="font-semibold text-[#111c2d]">{m.neck} cm</span></div>
-                      )}
-                      {m.arm !== null && (
-                        <div>Arm: <span className="font-semibold text-[#111c2d]">{m.arm} cm</span></div>
-                      )}
-                      {m.thigh !== null && (
-                        <div>Thigh: <span className="font-semibold text-[#111c2d]">{m.thigh} cm</span></div>
-                      )}
+                      {PERIMETER_FIELDS.map(({ key, label }) => {
+                        const val = m[key];
+                        if (val === null || val === undefined) return null;
+                        return (
+                          <div key={key}>{label}: <span className="font-semibold text-white">{val as number} cm</span></div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -682,14 +663,14 @@ export const ClientProfile: React.FC<Props> = ({
         <section className="space-y-6">
           <div className="flex justify-between items-center flex-wrap gap-3">
             <div>
-              <h3 className="text-xl font-semibold text-[#111c2d]">Progress Photos</h3>
-              <p className="text-xs text-[#3e4947]">Review visual trajectory & compare baseline</p>
+              <h3 className="text-xl font-semibold text-white">Progress Photos</h3>
+              <p className="text-xs text-text-muted">Review visual trajectory & compare baseline</p>
             </div>
             {photos.length > 0 && (
               <button
                 onClick={handleDownloadAll}
                 disabled={downloadingAll}
-                className="bg-white text-[#005c55] border-2 border-[#005c55] hover:bg-[#e7eeff] text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-full flex items-center gap-1.5 disabled:opacity-50"
+                className="bg-surface text-accent border-2 border-accent hover:bg-accent/10 text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-full flex items-center gap-1.5 disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-base">
                   {downloadingAll ? 'hourglass_empty' : 'folder_zip'}
@@ -703,8 +684,8 @@ export const ClientProfile: React.FC<Props> = ({
             <div
               className={`p-3 text-xs font-medium rounded-lg border ${
                 downloadFailures.length > 0
-                  ? 'bg-[#fff3cd] text-[#664d03] border-[#ffc107]/40'
-                  : 'bg-[#86f2e4]/30 text-[#006f66] border-[#006f66]/20'
+                  ? 'bg-amber-950/40 text-amber-400 border-amber-800/40'
+                  : 'bg-success/10 text-success border-success/20'
               }`}
             >
               {downloadNotice}
@@ -731,34 +712,34 @@ export const ClientProfile: React.FC<Props> = ({
               <button
                 key={angle}
                 onClick={() => openPicker(angle)}
-                className="bg-white hover:bg-[#f0f3ff] border border-[#bdc9c6]/60 rounded-xl p-3 flex flex-col items-center gap-1.5 shadow-sm transition-colors"
+                className="bg-surface hover:bg-surface-alt border border-border rounded-xl p-3 flex flex-col items-center gap-1.5 transition-colors"
               >
-                <span className="material-symbols-outlined text-[#005c55] text-xl">add_a_photo</span>
-                <span className="text-xs font-semibold text-[#111c2d]">{ANGLE_LABELS[angle]}</span>
+                <span className="material-symbols-outlined text-accent text-xl">add_a_photo</span>
+                <span className="text-xs font-semibold text-white">{ANGLE_LABELS[angle]}</span>
               </button>
             ))}
           </div>
 
           {/* Before / After Comparison */}
           {photos.length >= 2 && beforePhoto && afterPhoto && (
-            <div className="bg-white rounded-xl border border-[#bdc9c6]/60 shadow-sm p-4">
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#bdc9c6]/40">
-                <span className="material-symbols-outlined text-[#005c55]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <div className="bg-surface rounded-xl border border-border p-4">
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
+                <span className="material-symbols-outlined text-accent" style={{ fontVariationSettings: "'FILL' 1" }}>
                   compare
                 </span>
-                <h4 className="font-semibold text-base text-[#111c2d]">Before / After Comparison</h4>
+                <h4 className="font-semibold text-base text-white">Before / After Comparison</h4>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label htmlFor="before-select" className="block text-xs font-semibold uppercase tracking-wider text-[#3e4947] mb-1">
+                  <label htmlFor="before-select" className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
                     Before
                   </label>
                   <select
                     id="before-select"
                     value={beforePhotoId}
                     onChange={(e) => setBeforePhotoId(e.target.value)}
-                    className="w-full p-2 bg-[#f0f3ff] border border-[#bdc9c6] rounded-lg text-sm text-[#111c2d]"
+                    className="w-full p-2 bg-surface-alt border border-border rounded-lg text-sm text-white"
                   >
                     {photos.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -768,14 +749,14 @@ export const ClientProfile: React.FC<Props> = ({
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="after-select" className="block text-xs font-semibold uppercase tracking-wider text-[#3e4947] mb-1">
+                  <label htmlFor="after-select" className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
                     After
                   </label>
                   <select
                     id="after-select"
                     value={afterPhotoId}
                     onChange={(e) => setAfterPhotoId(e.target.value)}
-                    className="w-full p-2 bg-[#f0f3ff] border border-[#bdc9c6] rounded-lg text-sm text-[#111c2d]"
+                    className="w-full p-2 bg-surface-alt border border-border rounded-lg text-sm text-white"
                   >
                     {photos.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -787,29 +768,26 @@ export const ClientProfile: React.FC<Props> = ({
               </div>
 
               {anglesMismatch && (
-                <p className="text-xs text-[#664d03] bg-[#fff3cd] border border-[#ffc107]/40 rounded px-2 py-1.5 mb-3">
+                <p className="text-xs text-amber-400 bg-amber-950/40 border border-amber-800/40 rounded px-2 py-1.5 mb-3">
                   Before and After photos use different angles — the comparison may be less accurate.
                 </p>
               )}
 
-              {/* Slider Area */}
-              <div className="relative w-full max-w-[500px] mx-auto h-[350px] bg-[#f0f3ff] rounded-lg overflow-hidden border border-[#bdc9c6] select-none touch-none">
+              {/* Slider Area — both images render the COMPLETE photo (object-contain, letterboxed)
+                  and the "before" image is revealed via clip-path so nothing is cropped or misaligned. */}
+              <div className="relative w-full max-w-[500px] mx-auto h-[350px] bg-ink rounded-lg overflow-hidden border border-border select-none touch-none">
                 <img
                   src={afterPhoto.signed_url || ''}
                   alt="After"
-                  className="absolute inset-0 w-full h-full object-cover object-top pointer-events-none"
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                 />
 
-                <div
-                  className="absolute inset-y-0 left-0 overflow-hidden border-r-2 border-[#005c55] pointer-events-none bg-[#f0f3ff]"
-                  style={{ width: `${sliderVal}%` }}
-                >
-                  <img
-                    src={beforePhoto.signed_url || ''}
-                    alt="Before"
-                    className="absolute inset-0 w-[500px] h-full object-cover object-top max-w-none"
-                  />
-                </div>
+                <img
+                  src={beforePhoto.signed_url || ''}
+                  alt="Before"
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                  style={{ clipPath: `inset(0 ${100 - sliderVal}% 0 0)` }}
+                />
 
                 <input
                   type="range"
@@ -825,14 +803,14 @@ export const ClientProfile: React.FC<Props> = ({
                   className="absolute inset-y-0 w-8 -ml-4 flex items-center justify-center pointer-events-none z-10"
                   style={{ left: `${sliderVal}%` }}
                 >
-                  <div className="w-[2px] h-full bg-[#005c55] flex items-center justify-center relative">
-                    <div className="w-9 h-9 bg-white border border-[#bdc9c6] rounded-full shadow-md flex items-center justify-center text-[#005c55]">
+                  <div className="w-[2px] h-full bg-accent flex items-center justify-center relative">
+                    <div className="w-9 h-9 bg-surface border border-border rounded-full shadow-md flex items-center justify-center text-accent">
                       <span className="material-symbols-outlined text-lg">swap_horiz</span>
                     </div>
                   </div>
                 </div>
               </div>
-              <p className="text-center text-xs text-[#3e4947] mt-2">
+              <p className="text-center text-xs text-text-muted mt-2">
                 Drag the slider (or use arrow keys once focused) — Before {sliderVal}% / After {100 - sliderVal}%
               </p>
             </div>
@@ -840,15 +818,15 @@ export const ClientProfile: React.FC<Props> = ({
 
           {/* Gallery Archive Grid */}
           <div className="space-y-3">
-            <h4 className="font-semibold text-[#111c2d] text-base">Gallery Archive</h4>
+            <h4 className="font-semibold text-white text-base">Gallery Archive</h4>
 
             {photos.length === 0 ? (
-              <div className="bg-white rounded-xl p-8 text-center border border-[#bdc9c6]/60">
-                <span className="material-symbols-outlined text-3xl text-[#005c55] mb-2">
+              <div className="bg-surface rounded-xl p-8 text-center border border-border">
+                <span className="material-symbols-outlined text-3xl text-accent mb-2">
                   photo_library
                 </span>
-                <p className="text-sm font-semibold text-[#111c2d]">No progress photos uploaded yet</p>
-                <p className="text-xs text-[#6e7977] mt-1 mb-3">
+                <p className="text-sm font-semibold text-white">No progress photos uploaded yet</p>
+                <p className="text-xs text-text-muted mt-1 mb-3">
                   Upload front, back, and side photos to track physical transformations.
                 </p>
               </div>
@@ -857,9 +835,9 @@ export const ClientProfile: React.FC<Props> = ({
                 {photos.map((photo, idx) => (
                   <div
                     key={photo.id || idx}
-                    className="relative group bg-white rounded-lg overflow-hidden border border-[#bdc9c6]/60 shadow-sm hover:shadow-md transition-all"
+                    className="relative group bg-surface rounded-lg overflow-hidden border border-border hover:border-accent/50 transition-all"
                   >
-                    <div className="aspect-[3/4] relative bg-[#d8e3fb]">
+                    <div className="aspect-[3/4] relative bg-surface-alt">
                       {photo.signed_url ? (
                         <img
                           src={photo.signed_url}
@@ -867,7 +845,7 @@ export const ClientProfile: React.FC<Props> = ({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#3e4947] text-xs">
+                        <div className="w-full h-full flex items-center justify-center text-text-muted text-xs">
                           Image Unavailable
                         </div>
                       )}
@@ -903,9 +881,9 @@ export const ClientProfile: React.FC<Props> = ({
 
       {/* NOTES TAB */}
       {activeTab === 'notes' && (
-        <section className="bg-white rounded-xl p-4 md:p-6 border border-[#bdc9c6]/60 shadow-sm space-y-4">
-          <h3 className="text-xl font-semibold text-[#111c2d]">Coaching & Goal Notes</h3>
-          <p className="text-xs text-[#3e4947]">
+        <section className="bg-surface rounded-xl p-4 md:p-6 border border-border space-y-4">
+          <h3 className="text-xl font-semibold text-white">Coaching & Goal Notes</h3>
+          <p className="text-xs text-text-muted">
             Keep track of personal fitness goals, medical background, dietary restrictions, or training milestones.
           </p>
 
@@ -914,19 +892,19 @@ export const ClientProfile: React.FC<Props> = ({
             value={notesText}
             onChange={(e) => setNotesText(e.target.value)}
             placeholder="e.g. Goal: Lose 5kg in 12 weeks. Prefers low-impact cardio. Avoid heavy squatting due to past knee sensitivity..."
-            className="w-full p-3 bg-[#f0f3ff] border border-[#bdc9c6] rounded-lg text-sm text-[#111c2d] focus:outline-none focus:border-[#005c55]"
+            className="w-full p-3 bg-surface-alt border border-border rounded-lg text-sm text-white focus:outline-none focus:border-accent"
           />
 
           <div className="flex items-center gap-3">
             <button
               onClick={handleSaveNotes}
               disabled={savingNotes}
-              className="bg-[#005c55] hover:bg-[#0f766e] text-white text-xs font-semibold uppercase tracking-wider px-6 py-2.5 rounded-lg btn-press shadow-sm"
+              className="bg-accent hover:bg-accent-hover text-white text-xs font-semibold uppercase tracking-wider px-6 py-2.5 rounded-lg btn-press"
             >
               {savingNotes ? 'Saving...' : 'Save Notes'}
             </button>
             {notesSuccess && (
-              <span className="text-xs text-[#0f766e] font-semibold flex items-center gap-1">
+              <span className="text-xs text-success font-semibold flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">check_circle</span>
                 Saved successfully!
               </span>
@@ -935,28 +913,39 @@ export const ClientProfile: React.FC<Props> = ({
         </section>
       )}
 
+      {/* SETTINGS TAB */}
+      {activeTab === 'settings' && (
+        <ClientSettingsTab
+          client={client}
+          measurements={measurements}
+          onNavigate={onNavigate}
+          onRefreshClient={() => onRefreshClient && onRefreshClient()}
+          onRefreshMeasurements={fetchData}
+        />
+      )}
+
       {/* UPLOAD PHOTO MODAL */}
       {selectedFile && pendingAngle && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-[#bdc9c6]">
-            <div className="flex justify-between items-center pb-2 border-b border-[#bdc9c6]/40">
-              <h3 className="text-lg font-bold text-[#005c55]">Upload {ANGLE_LABELS[pendingAngle]} Photo</h3>
+          <div className="bg-surface rounded-xl max-w-md w-full p-6 space-y-4 border border-border max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center pb-2 border-b border-border">
+              <h3 className="text-lg font-bold text-accent">Upload {ANGLE_LABELS[pendingAngle]} Photo</h3>
               <button
                 onClick={cancelUpload}
-                className="text-[#6e7977] hover:text-[#111c2d]"
+                className="text-text-muted hover:text-white"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
             {uploadError && (
-              <div className="p-3 bg-[#ffdad6] text-[#93000a] text-xs rounded border border-[#ba1a1a]/20">
+              <div className="p-3 bg-danger-bg text-danger text-xs rounded border border-danger/30">
                 {uploadError}
               </div>
             )}
 
             <form onSubmit={handlePhotoUpload} className="space-y-4">
-              <div className="rounded-lg overflow-hidden border border-[#bdc9c6] bg-[#f0f3ff] aspect-video flex items-center justify-center">
+              <div className="rounded-lg overflow-hidden border border-border bg-surface-alt aspect-video flex items-center justify-center">
                 <img
                   src={URL.createObjectURL(selectedFile)}
                   alt="Selected preview"
@@ -965,7 +954,7 @@ export const ClientProfile: React.FC<Props> = ({
               </div>
 
               <div>
-                <label htmlFor="taken-at" className="block text-xs font-semibold uppercase tracking-wider text-[#3e4947] mb-1">
+                <label htmlFor="taken-at" className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
                   Date & Time Taken
                 </label>
                 <input
@@ -973,7 +962,7 @@ export const ClientProfile: React.FC<Props> = ({
                   type="datetime-local"
                   value={photoDateTime}
                   onChange={(e) => setPhotoDateTime(e.target.value)}
-                  className="w-full p-2.5 bg-[#f0f3ff] border border-[#bdc9c6] rounded-lg text-sm text-[#111c2d]"
+                  className="w-full p-2.5 bg-surface-alt border border-border rounded-lg text-sm text-white"
                   required
                 />
               </div>
@@ -982,14 +971,14 @@ export const ClientProfile: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={cancelUpload}
-                  className="px-4 py-2 text-xs font-semibold uppercase text-[#3e4947] hover:bg-[#f0f3ff] rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold uppercase text-text-muted hover:bg-surface-alt rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={uploading}
-                  className="px-6 py-2 bg-[#005c55] text-white text-xs font-semibold uppercase tracking-wider rounded-lg btn-press shadow"
+                  className="px-6 py-2 bg-accent text-white text-xs font-semibold uppercase tracking-wider rounded-lg btn-press"
                 >
                   {uploading ? 'Uploading...' : 'Upload Photo'}
                 </button>

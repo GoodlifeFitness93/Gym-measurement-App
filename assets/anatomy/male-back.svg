@@ -1,0 +1,12 @@
+<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Male body diagram, back view">
+  <g fill="#c9c9d1" stroke="#8f8f99" stroke-width="1.5">
+    <circle cx="100" cy="26" r="16" />
+    <rect x="91" y="40" width="18" height="14" rx="3" />
+    <polygon points="65,54 135,54 130,90 124,128 130,164 70,164 76,128 70,90" />
+    <rect x="36" y="54" width="26" height="112" rx="13" />
+    <rect x="138" y="54" width="26" height="112" rx="13" />
+    <rect x="70" y="164" width="28" height="92" rx="13" />
+    <rect x="102" y="164" width="28" height="92" rx="13" />
+  </g>
+  <line x1="100" y1="58" x2="100" y2="196" stroke="#8f8f99" stroke-width="1.5" opacity="0.7" />
+</svg>

@@ -1,0 +1,33 @@
+<svg viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="How to measure chest circumference">
+  <defs>
+    <style>
+      .skin { fill: #f4c9a1; }
+      .skin-shadow { fill: #e8a575; }
+    </style>
+  </defs>
+  <!-- neck -->
+  <rect x="130" y="30" width="40" height="35" rx="6" class="skin" />
+  <!-- left arm -->
+  <path class="skin" d="M45,95 C42,90 55,78 75,78 L95,90 L85,260 C82,275 60,275 55,262 Z" />
+  <!-- right arm -->
+  <path class="skin" d="M255,95 C258,90 245,78 225,78 L205,90 L215,260 C218,275 240,275 245,262 Z" />
+  <!-- torso -->
+  <path class="skin" d="M85,78 C100,64 200,64 215,78 C230,95 236,140 232,190 C228,235 220,270 210,300 L90,300 C80,270 72,235 68,190 C64,140 70,95 85,78 Z" />
+  <!-- chest definition -->
+  <path d="M150,110 L150,220" stroke="#e8a575" stroke-width="3" opacity="0.6" fill="none" />
+  <path class="skin-shadow" d="M100,140 C120,155 130,170 150,175 C170,170 180,155 200,140 C185,165 168,185 150,188 C132,185 115,165 100,140 Z" opacity="0.35" />
+  <!-- tape across chest -->
+  <rect x="78" y="182" width="144" height="20" rx="4" fill="#f6d94a" />
+  <g stroke="#2e3646" stroke-width="2">
+    <line x1="90" y1="182" x2="90" y2="202" />
+    <line x1="104" y1="182" x2="104" y2="202" />
+    <line x1="118" y1="182" x2="118" y2="202" />
+    <line x1="132" y1="182" x2="132" y2="202" />
+    <line x1="146" y1="182" x2="146" y2="202" />
+    <line x1="160" y1="182" x2="160" y2="202" />
+    <line x1="174" y1="182" x2="174" y2="202" />
+    <line x1="188" y1="182" x2="188" y2="202" />
+    <line x1="202" y1="182" x2="202" y2="202" />
+  </g>
+  <rect x="208" y="182" width="10" height="20" rx="1.5" fill="#2e3646" />
+</svg>

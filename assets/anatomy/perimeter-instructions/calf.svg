@@ -1,0 +1,27 @@
+<svg viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="How to measure calf circumference">
+  <defs>
+    <style>
+      .skin { fill: #f0a978; }
+      .skin-light { fill: #f4c9a1; }
+    </style>
+  </defs>
+  <!-- shorts hem (dark) -->
+  <path d="M20,20 L150,20 C162,20 170,30 170,45 L170,95 L20,95 Z" fill="#333d4d" />
+  <!-- thigh -->
+  <path class="skin" d="M150,55 C185,52 215,58 232,78 C246,95 246,118 230,132 C214,146 190,150 170,146 L155,146 C148,146 143,140 143,132 L143,68 C143,60 146,56 150,55 Z" />
+  <ellipse class="skin-light" cx="195" cy="150" rx="42" ry="24" opacity="0.5" />
+  <!-- calf/shin -->
+  <path class="skin-light" d="M172,146 C195,146 215,150 222,168 C230,190 228,220 220,245 C214,265 206,280 198,288 L166,288 C160,280 156,260 155,238 C154,210 156,180 162,158 C165,150 168,146 172,146 Z" />
+  <!-- foot -->
+  <ellipse class="skin-light" cx="182" cy="298" rx="26" ry="14" />
+  <!-- tape wrapped around the calf -->
+  <path d="M160,196 C170,186 208,186 218,197 C214,214 168,214 160,196 Z" fill="#f6d94a" />
+  <g stroke="#2e3646" stroke-width="2">
+    <line x1="166" y1="190" x2="170" y2="212" />
+    <line x1="176" y1="187" x2="179" y2="213" />
+    <line x1="188" y1="187" x2="190" y2="213" />
+    <line x1="200" y1="188" x2="201" y2="212" />
+    <line x1="210" y1="191" x2="209" y2="211" />
+  </g>
+  <rect x="159" y="192" width="8" height="16" rx="1.5" fill="#2e3646" transform="rotate(-8 163 200)" />
+</svg>

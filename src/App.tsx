@@ -10,7 +10,7 @@ import { ClientProfile } from './components/ClientProfile';
 import { AddMeasurementModal } from './components/AddMeasurementModal';
 import { MeasurementProgress } from './components/MeasurementProgress';
 import { ShareReportModal } from './components/ShareReportModal';
-import { AddClientModal } from './components/AddClientModal';
+import { NewClientWizard } from './components/wizard/NewClientWizard';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ActiveScreen, Client, TrainerProfile } from './types';
 
@@ -113,10 +113,10 @@ export default function App() {
   // Render 1: Supabase Credentials Missing (developer-facing only; never shown to end users)
   if (!configured) {
     return (
-      <div className="min-h-screen bg-[#f9f9ff] flex flex-col justify-center items-center p-6 text-[#111c2d] text-center gap-2">
-        <span className="material-symbols-outlined text-4xl text-[#ba1a1a]">error</span>
-        <p className="text-sm font-semibold text-[#93000a]">Configuration Error</p>
-        <p className="text-xs text-[#3e4947] max-w-sm">
+      <div className="min-h-screen bg-ink flex flex-col justify-center items-center p-6 text-white text-center gap-2">
+        <span className="material-symbols-outlined text-4xl text-danger">error</span>
+        <p className="text-sm font-semibold text-danger">Configuration Error</p>
+        <p className="text-xs text-text-muted max-w-sm">
           The application is missing required environment configuration. Check the server/deployment logs for details.
         </p>
       </div>
@@ -126,10 +126,10 @@ export default function App() {
   // Render 2: Auth Check Loading
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#f9f9ff] flex flex-col justify-center items-center p-6 text-[#111c2d]">
+      <div className="min-h-screen bg-ink flex flex-col justify-center items-center p-6 text-white">
         <div className="flex flex-col items-center gap-3">
-          <span className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-[#005c55] border-t-transparent" />
-          <p className="text-sm font-semibold text-[#005c55]">Loading Goodlife Fitness...</p>
+          <span className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-accent border-t-transparent" />
+          <p className="text-sm font-semibold text-accent">Loading Goodlife Fitness...</p>
         </div>
       </div>
     );
@@ -143,8 +143,8 @@ export default function App() {
   // Render 4: Trainer profile still loading (avoids a flash of the wrong screen)
   if (!trainerProfile) {
     return (
-      <div className="min-h-screen bg-[#f9f9ff] flex flex-col justify-center items-center p-6 text-[#111c2d]">
-        <span className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-[#005c55] border-t-transparent" />
+      <div className="min-h-screen bg-ink flex flex-col justify-center items-center p-6 text-white">
+        <span className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-accent border-t-transparent" />
       </div>
     );
   }
@@ -152,10 +152,10 @@ export default function App() {
   // Render 5: Deactivated Account
   if (!trainerProfile.is_active) {
     return (
-      <div className="min-h-screen bg-[#f9f9ff] flex flex-col justify-center items-center p-6 text-[#111c2d] text-center gap-3">
-        <span className="material-symbols-outlined text-4xl text-[#ba1a1a]">lock</span>
-        <h1 className="text-lg font-semibold text-[#93000a]">Account Inactive</h1>
-        <p className="text-sm text-[#3e4947] max-w-sm">
+      <div className="min-h-screen bg-ink flex flex-col justify-center items-center p-6 text-white text-center gap-3">
+        <span className="material-symbols-outlined text-4xl text-danger">lock</span>
+        <h1 className="text-lg font-semibold text-danger">Account Inactive</h1>
+        <p className="text-sm text-text-muted max-w-sm">
           Your Goodlife Fitness trainer account is currently inactive. Please contact the administrator.
         </p>
         <button
@@ -165,7 +165,7 @@ export default function App() {
             setSession(null);
             setTrainerProfile(null);
           }}
-          className="mt-2 bg-[#005c55] hover:bg-[#0f766e] text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-lg btn-press"
+          className="mt-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-lg btn-press"
         >
           Sign Out
         </button>
@@ -193,7 +193,7 @@ export default function App() {
   const showBack = activeScreen !== 'dashboard';
 
   return (
-    <div className="min-h-screen bg-[#f9f9ff] text-[#111c2d] flex flex-col font-['Inter',sans-serif]">
+    <div className="min-h-screen bg-ink text-white flex flex-col font-['Inter',sans-serif]">
       {/* Top Header */}
       <Header
         activeScreen={activeScreen}
@@ -254,7 +254,7 @@ export default function App() {
         )}
 
         {activeScreen === 'add_client' && (
-          <AddClientModal
+          <NewClientWizard
             onNavigate={navigateTo}
             onSuccess={(newClient) => {
               setSelectedClient(newClient);

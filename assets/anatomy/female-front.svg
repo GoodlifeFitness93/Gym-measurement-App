@@ -1,0 +1,12 @@
+<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Female body diagram, front view">
+  <g fill="#c9c9d1" stroke="#8f8f99" stroke-width="1.5">
+    <circle cx="100" cy="26" r="16" />
+    <rect x="91" y="40" width="18" height="14" rx="3" />
+    <polygon points="72,54 128,54 126,90 120,128 134,164 66,164 80,128 74,90" />
+    <rect x="42" y="54" width="24" height="106" rx="12" />
+    <rect x="134" y="54" width="24" height="106" rx="12" />
+    <rect x="70" y="164" width="28" height="92" rx="13" />
+    <rect x="102" y="164" width="28" height="92" rx="13" />
+  </g>
+  <line x1="100" y1="58" x2="100" y2="126" stroke="#8f8f99" stroke-width="1" opacity="0.5" />
+</svg>

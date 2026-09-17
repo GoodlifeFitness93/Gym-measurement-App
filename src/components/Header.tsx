@@ -15,15 +15,15 @@ export const Header: React.FC<Props> = ({
   showBack = false,
 }) => {
   return (
-    <header className="w-full sticky top-0 z-50 bg-[#f9f9ff] border-b border-[#bdc9c6]/50 shadow-sm transition-transform duration-200">
+    <header className="w-full sticky top-0 z-50 bg-ink border-b border-border shadow-sm transition-transform duration-200">
       <div className="flex items-center justify-between px-4 py-3 w-full max-w-7xl mx-auto">
         {showBack ? (
           <button
             onClick={onBack}
-            className="text-[#3e4947] hover:bg-[#e7eeff] rounded-full p-1.5 flex items-center justify-center transition-colors active:scale-95"
+            className="text-text-muted hover:bg-surface-alt rounded-full p-1.5 flex items-center justify-center transition-colors active:scale-95"
             aria-label="Go back"
           >
-            <span className="material-symbols-outlined text-[#005c55] text-2xl">
+            <span className="material-symbols-outlined text-accent text-2xl">
               arrow_back
             </span>
           </button>
@@ -33,7 +33,7 @@ export const Header: React.FC<Props> = ({
 
         <h1
           onClick={() => onNavigate('dashboard')}
-          className="font-extrabold text-xl md:text-2xl text-[#005c55] tracking-tight text-center cursor-pointer flex-1"
+          className="font-extrabold text-xl md:text-2xl text-accent tracking-tight text-center cursor-pointer flex-1"
         >
           Goodlife Fitness
         </h1>
@@ -44,8 +44,8 @@ export const Header: React.FC<Props> = ({
             onClick={() => onNavigate('dashboard')}
             className={`text-xs font-semibold uppercase tracking-wider transition-colors pb-1 ${
               activeScreen === 'dashboard'
-                ? 'text-[#005c55] border-b-2 border-[#005c55]'
-                : 'text-[#3e4947] hover:text-[#005c55]'
+                ? 'text-accent border-b-2 border-accent'
+                : 'text-text-muted hover:text-accent'
             }`}
           >
             Dashboard
@@ -54,8 +54,8 @@ export const Header: React.FC<Props> = ({
             onClick={() => onNavigate('client_list')}
             className={`text-xs font-semibold uppercase tracking-wider transition-colors pb-1 ${
               activeScreen === 'client_list' || activeScreen === 'client_profile'
-                ? 'text-[#005c55] border-b-2 border-[#005c55]'
-                : 'text-[#3e4947] hover:text-[#005c55]'
+                ? 'text-accent border-b-2 border-accent'
+                : 'text-text-muted hover:text-accent'
             }`}
           >
             Clients
@@ -64,8 +64,8 @@ export const Header: React.FC<Props> = ({
             onClick={() => onNavigate('settings')}
             className={`text-xs font-semibold uppercase tracking-wider transition-colors pb-1 ${
               activeScreen === 'settings'
-                ? 'text-[#005c55] border-b-2 border-[#005c55]'
-                : 'text-[#3e4947] hover:text-[#005c55]'
+                ? 'text-accent border-b-2 border-accent'
+                : 'text-text-muted hover:text-accent'
             }`}
           >
             Settings
@@ -74,10 +74,10 @@ export const Header: React.FC<Props> = ({
 
         <button
           onClick={() => onNavigate('settings')}
-          className="text-[#3e4947] hover:bg-[#e7eeff] rounded-full p-1.5 flex items-center justify-center transition-colors active:scale-95"
+          className="text-text-muted hover:bg-surface-alt rounded-full p-1.5 flex items-center justify-center transition-colors active:scale-95"
           aria-label="Settings and Profile"
         >
-          <span className="material-symbols-outlined text-[#005c55] text-2xl">
+          <span className="material-symbols-outlined text-accent text-2xl">
             account_circle
           </span>
         </button>

@@ -1,0 +1,46 @@
+<svg viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="How to measure neck circumference">
+  <defs>
+    <style>
+      .skin { fill: #f4c9a1; }
+      .skin-shadow { fill: #e8a575; }
+      .hair { fill: #333d4d; }
+    </style>
+  </defs>
+  <!-- shoulders -->
+  <path class="skin-shadow" d="M60,232 L228,232 L250,300 L38,300 Z" />
+  <!-- neck -->
+  <path class="skin" d="M118,148 L176,148 L196,232 L98,232 Z" />
+  <!-- head (side profile facing left) -->
+  <path class="skin" d="M172,38
+    C147,36 121,47 106,71
+    C97,85 89,94 74,101
+    C86,110 99,112 107,114
+    C104,129 109,143 119,153
+    C129,163 144,169 160,169
+    C170,169 174,161 174,151
+    L174,110
+    C178,90 180,69 174,50
+    C173,46 172,42 172,38 Z" />
+  <!-- ear -->
+  <ellipse class="skin-shadow" cx="166" cy="121" rx="9" ry="12" />
+  <!-- hair -->
+  <path class="hair" d="M172,38
+    C189,36 202,45 206,62
+    C209,79 204,97 194,109
+    L174,110
+    C178,90 180,69 174,50
+    C173,46 172,42 172,38 Z" />
+  <!-- tape around neck -->
+  <ellipse cx="147" cy="192" rx="58" ry="19" fill="none" stroke="#f6d94a" stroke-width="17" />
+  <g stroke="#2e3646" stroke-width="2">
+    <line x1="98" y1="184" x2="98" y2="200" />
+    <line x1="110" y1="180" x2="110" y2="204" />
+    <line x1="123" y1="177" x2="123" y2="207" />
+    <line x1="137" y1="175" x2="137" y2="209" />
+    <line x1="151" y1="175" x2="151" y2="209" />
+    <line x1="165" y1="177" x2="165" y2="207" />
+    <line x1="178" y1="180" x2="178" y2="204" />
+    <line x1="190" y1="184" x2="190" y2="200" />
+  </g>
+  <rect x="192" y="184" width="8" height="16" rx="1.5" fill="#2e3646" />
+</svg>

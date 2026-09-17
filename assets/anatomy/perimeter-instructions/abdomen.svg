@@ -1,0 +1,33 @@
+<svg viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="How to measure abdomen circumference">
+  <defs>
+    <style>
+      .skin { fill: #f4c9a1; }
+      .teal { fill: #26a69a; }
+    </style>
+  </defs>
+  <!-- neck -->
+  <rect x="130" y="30" width="40" height="35" rx="6" class="skin" />
+  <!-- left arm -->
+  <path class="skin" d="M45,95 C42,90 55,78 75,78 L95,90 L85,260 C82,275 60,275 55,262 Z" />
+  <!-- right arm -->
+  <path class="skin" d="M255,95 C258,90 245,78 225,78 L205,90 L215,260 C218,275 240,275 245,262 Z" />
+  <!-- torso -->
+  <path class="skin" d="M85,78 C100,64 200,64 215,78 C230,95 236,140 232,190 C228,225 222,250 214,268 L86,268 C78,250 72,225 68,190 C64,140 70,95 85,78 Z" />
+  <!-- shorts -->
+  <path class="teal" d="M82,262 L218,262 L232,320 L68,320 Z" />
+  <rect x="78" y="255" width="144" height="16" rx="6" fill="#ffffff" />
+  <!-- tape at abdomen (right above waistband) -->
+  <rect x="80" y="240" width="140" height="20" rx="4" fill="#f6d94a" />
+  <g stroke="#2e3646" stroke-width="2">
+    <line x1="92" y1="240" x2="92" y2="260" />
+    <line x1="105" y1="240" x2="105" y2="260" />
+    <line x1="118" y1="240" x2="118" y2="260" />
+    <line x1="131" y1="240" x2="131" y2="260" />
+    <line x1="144" y1="240" x2="144" y2="260" />
+    <line x1="157" y1="240" x2="157" y2="260" />
+    <line x1="170" y1="240" x2="170" y2="260" />
+    <line x1="183" y1="240" x2="183" y2="260" />
+    <line x1="196" y1="240" x2="196" y2="260" />
+  </g>
+  <rect x="204" y="240" width="10" height="20" rx="1.5" fill="#2e3646" />
+</svg>

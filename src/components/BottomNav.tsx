@@ -12,15 +12,15 @@ export const BottomNav: React.FC<Props> = ({ activeScreen, onNavigate }) => {
   const isSettings = activeScreen === 'settings';
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 rounded-t-xl bg-white border-t border-[#bdc9c6]/50 shadow-[0_-4px_12px_rgba(15,118,110,0.05)]">
+    <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 rounded-t-xl bg-surface border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.25)]">
       <div className="flex justify-around items-center h-16 w-full px-4 pb-safe">
         {/* Dashboard */}
         <button
           onClick={() => onNavigate('dashboard')}
           className={`flex flex-col items-center justify-center px-3 py-1.5 rounded-full transition-all duration-150 active:scale-90 ${
             isDashboard
-              ? 'bg-[#86f2e4] text-[#006f66] w-20'
-              : 'text-[#3e4947] hover:text-[#005c55]'
+              ? 'bg-accent/15 text-accent w-20'
+              : 'text-text-muted hover:text-accent'
           }`}
         >
           <span
@@ -39,8 +39,8 @@ export const BottomNav: React.FC<Props> = ({ activeScreen, onNavigate }) => {
           onClick={() => onNavigate('client_list')}
           className={`flex flex-col items-center justify-center px-3 py-1.5 rounded-full transition-all duration-150 active:scale-90 ${
             isClients
-              ? 'bg-[#86f2e4] text-[#006f66] w-20'
-              : 'text-[#3e4947] hover:text-[#005c55]'
+              ? 'bg-accent/15 text-accent w-20'
+              : 'text-text-muted hover:text-accent'
           }`}
         >
           <span
@@ -59,8 +59,8 @@ export const BottomNav: React.FC<Props> = ({ activeScreen, onNavigate }) => {
           onClick={() => onNavigate('settings')}
           className={`flex flex-col items-center justify-center px-3 py-1.5 rounded-full transition-all duration-150 active:scale-90 ${
             isSettings
-              ? 'bg-[#86f2e4] text-[#006f66] w-20'
-              : 'text-[#3e4947] hover:text-[#005c55]'
+              ? 'bg-accent/15 text-accent w-20'
+              : 'text-text-muted hover:text-accent'
           }`}
         >
           <span

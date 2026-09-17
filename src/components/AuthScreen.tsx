@@ -97,24 +97,17 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="bg-[#f9f9ff] min-h-screen flex flex-col items-center justify-center p-5 font-['Inter',sans-serif] text-[#111c2d]">
+    <div className="bg-ink min-h-screen flex flex-col items-center justify-center p-5 font-['Inter',sans-serif] text-white">
       <main className="w-full max-w-md flex flex-col items-center">
         {/* Logo & Branding */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-white rounded-xl shadow-[0_4px_12px_rgba(15,118,110,0.05)] flex items-center justify-center border border-[#bdc9c6] mb-4">
-            <span
-              className="material-symbols-outlined text-[#005c55] text-4xl"
-              data-icon="monitor_heart"
-              data-weight="fill"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              monitor_heart
-            </span>
+          <div className="w-16 h-16 bg-surface rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.3)] flex items-center justify-center border border-border mb-4 overflow-hidden">
+            <img src="/android-chrome-512x512.png" alt="Goodlife Fitness" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-[#111c2d] mb-1">
+          <h1 className="text-2xl md:text-3xl font-semibold text-white mb-1">
             Goodlife Fitness
           </h1>
-          <p className="text-base text-[#3e4947] tracking-wide">
+          <p className="text-base text-text-muted tracking-wide">
             Precision Coaching
           </p>
         </div>
@@ -122,17 +115,17 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
         {/* Auth Form Card */}
         <form
           onSubmit={handleSubmit}
-          className="w-full bg-white p-6 md:p-8 rounded-xl shadow-[0_4px_12px_rgba(15,118,110,0.05)] border border-[#bdc9c6] flex flex-col gap-6"
+          className="w-full bg-surface p-6 md:p-8 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.3)] border border-border flex flex-col gap-6"
         >
           {/* Form Toggle Tabs */}
-          <div className="flex border-b border-[#bdc9c6] pb-1">
+          <div className="flex border-b border-border pb-1">
             <button
               type="button"
               onClick={() => { setIsSignUp(false); setError(null); }}
               className={`flex-1 py-2 text-center text-sm font-semibold uppercase tracking-wider transition-colors ${
                 !isSignUp
-                  ? 'text-[#005c55] border-b-2 border-[#005c55]'
-                  : 'text-[#6e7977] hover:text-[#111c2d]'
+                  ? 'text-accent border-b-2 border-accent'
+                  : 'text-text-muted hover:text-white'
               }`}
             >
               Log In
@@ -142,8 +135,8 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
               onClick={() => { setIsSignUp(true); setError(null); }}
               className={`flex-1 py-2 text-center text-sm font-semibold uppercase tracking-wider transition-colors ${
                 isSignUp
-                  ? 'text-[#005c55] border-b-2 border-[#005c55]'
-                  : 'text-[#6e7977] hover:text-[#111c2d]'
+                  ? 'text-accent border-b-2 border-accent'
+                  : 'text-text-muted hover:text-white'
               }`}
             >
               Sign Up
@@ -151,14 +144,14 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
           </div>
 
           {error && (
-            <div className="p-3 bg-[#ffdad6] text-[#93000a] text-xs font-medium rounded border border-[#ba1a1a]/20">
+            <div className="p-3 bg-danger-bg text-danger text-xs font-medium rounded border border-danger/20">
               {error}
             </div>
           )}
 
           {isSignUp && (
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-[#3e4947]">
+              <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                 Full Name
               </label>
               <input
@@ -167,7 +160,7 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
                 placeholder="Coach Sarah Jenkins"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="input-clinical w-full px-4 py-3 rounded-t-lg border-0 border-b-2 text-base text-[#111c2d] placeholder:text-[#6e7977]"
+                className="input-clinical w-full px-4 py-3 rounded-t-lg border-0 border-b-2 text-base text-white placeholder:text-text-muted"
               />
             </div>
           )}
@@ -175,7 +168,7 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
           <div className="flex flex-col gap-1">
             <label
               htmlFor="email"
-              className="text-xs font-semibold uppercase tracking-wider text-[#3e4947]"
+              className="text-xs font-semibold uppercase tracking-wider text-text-muted"
             >
               Email Address
             </label>
@@ -186,7 +179,7 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
               placeholder="coach@clinic.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="input-clinical w-full px-4 py-3 rounded-t-lg border-0 border-b-2 text-base text-[#111c2d] placeholder:text-[#6e7977]"
+              className="input-clinical w-full px-4 py-3 rounded-t-lg border-0 border-b-2 text-base text-white placeholder:text-text-muted"
             />
           </div>
 
@@ -194,7 +187,7 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
             <div className="flex justify-between items-center w-full">
               <label
                 htmlFor="password"
-                className="text-xs font-semibold uppercase tracking-wider text-[#3e4947]"
+                className="text-xs font-semibold uppercase tracking-wider text-text-muted"
               >
                 Password
               </label>
@@ -202,7 +195,7 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
                 <a
                   href="#"
                   onClick={(e) => { e.preventDefault(); alert('Please request password reset from your administrator or Supabase dashboard.'); }}
-                  className="text-sm text-[#005c55] hover:underline"
+                  className="text-sm text-accent hover:underline"
                 >
                   Reset?
                 </a>
@@ -215,14 +208,14 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-clinical w-full px-4 py-3 rounded-t-lg border-0 border-b-2 text-base text-[#111c2d] placeholder:text-[#6e7977]"
+              className="input-clinical w-full px-4 py-3 rounded-t-lg border-0 border-b-2 text-base text-white placeholder:text-text-muted"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-[#005c55] hover:bg-[#0f766e] text-white py-3 px-6 rounded-lg font-semibold text-lg btn-press shadow-[0_4px_12px_rgba(15,118,110,0.15)] flex justify-center items-center gap-2 disabled:opacity-50"
+            className="w-full mt-2 bg-accent hover:bg-accent-hover text-white py-3 px-6 rounded-lg font-semibold text-lg btn-press shadow-[0_4px_12px_rgba(255,106,26,0.25)] flex justify-center items-center gap-2 disabled:opacity-50"
           >
             {loading ? (
               <span className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
@@ -239,7 +232,7 @@ export const AuthScreen: React.FC<Props> = ({ onSuccess }) => {
 
         {/* Minimal Footer */}
         <div className="mt-8 text-center">
-          <p className="text-xs text-[#3e4947]">System version 4.2.1-stable</p>
+          <p className="text-xs text-text-muted">System version 4.2.1-stable</p>
         </div>
       </main>
     </div>

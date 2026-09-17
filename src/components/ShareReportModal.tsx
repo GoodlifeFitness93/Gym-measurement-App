@@ -157,74 +157,74 @@ export const ShareReportModal: React.FC<Props> = ({ client, onNavigate }) => {
     <div className="flex-grow flex flex-col px-5 py-6 gap-6 pb-28 max-w-3xl mx-auto w-full font-['Inter',sans-serif]">
       {/* Header */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-2xl md:text-3xl font-semibold text-[#111c2d]">
+        <h2 className="text-2xl md:text-3xl font-semibold text-white">
           Report Preview
         </h2>
-        <p className="text-sm text-[#3e4947]">
+        <p className="text-sm text-text-muted">
           Review and configure the progress report before sharing with {client.name}.
         </p>
       </div>
 
       {/* Preview Card */}
-      <div className="bg-white rounded-xl border border-[#bdc9c6]/60 shadow-[0_4px_12px_rgba(15,118,110,0.05)] overflow-hidden flex flex-col">
+      <div className="bg-surface rounded-xl border border-border shadow-[0_4px_12px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col">
         {/* Card Header */}
-        <div className="p-4 border-b border-[#bdc9c6]/40 bg-[#f0f3ff] flex justify-between items-center">
+        <div className="p-4 border-b border-border bg-surface-alt flex justify-between items-center">
           <div className="flex flex-col">
-            <span className="text-[11px] font-semibold text-[#005c55] uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-accent uppercase tracking-wider">
               PROGRESS SUMMARY
             </span>
-            <span className="text-lg font-semibold text-[#111c2d]">
+            <span className="text-lg font-semibold text-white">
               {client.name}
             </span>
           </div>
           <div className="text-right flex flex-col">
-            <span className="text-xs text-[#3e4947] font-medium">{dateRangeHeader}</span>
+            <span className="text-xs text-text-muted font-medium">{dateRangeHeader}</span>
           </div>
         </div>
 
         {/* Card Body - Metric Cards */}
         <div className="p-4 grid grid-cols-2 gap-3">
-          <div className="bg-[#f0f3ff] rounded-lg p-3 flex flex-col items-center justify-center border border-[#bdc9c6]/30">
-            <span className="text-[11px] font-semibold text-[#3e4947] uppercase mb-1">
+          <div className="bg-surface-alt rounded-lg p-3 flex flex-col items-center justify-center border border-border">
+            <span className="text-[11px] font-semibold text-text-muted uppercase mb-1">
               Weight Change
             </span>
             <div className="flex items-baseline gap-1">
-              <span className="material-symbols-outlined text-lg text-[#005c55]">
+              <span className="material-symbols-outlined text-lg text-accent">
                 trending_down
               </span>
-              <span className="text-2xl font-bold text-[#005c55]">
+              <span className="text-2xl font-bold text-accent">
                 {lastM?.weight && firstM?.weight
                   ? (lastM.weight - firstM.weight).toFixed(1)
                   : '-4.0'}
               </span>
-              <span className="text-xs text-[#3e4947]">kg</span>
+              <span className="text-xs text-text-muted">kg</span>
             </div>
           </div>
 
-          <div className="bg-[#f0f3ff] rounded-lg p-3 flex flex-col items-center justify-center border border-[#bdc9c6]/30">
-            <span className="text-[11px] font-semibold text-[#3e4947] uppercase mb-1">
+          <div className="bg-surface-alt rounded-lg p-3 flex flex-col items-center justify-center border border-border">
+            <span className="text-[11px] font-semibold text-text-muted uppercase mb-1">
               Body Fat Change
             </span>
             <div className="flex items-baseline gap-1">
-              <span className="material-symbols-outlined text-lg text-[#005c55]">
+              <span className="material-symbols-outlined text-lg text-accent">
                 trending_down
               </span>
-              <span className="text-2xl font-bold text-[#005c55]">
+              <span className="text-2xl font-bold text-accent">
                 {lastM?.body_fat_percent && firstM?.body_fat_percent
                   ? (lastM.body_fat_percent - firstM.body_fat_percent).toFixed(1)
                   : '-3.0'}
               </span>
-              <span className="text-xs text-[#3e4947]">%</span>
+              <span className="text-xs text-text-muted">%</span>
             </div>
           </div>
         </div>
 
         {/* Raw Text Preview Box */}
-        <div className="p-4 bg-[#f9f9ff] border-t border-[#bdc9c6]/40">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-[#3e4947] mb-2">
+        <div className="p-4 bg-ink border-t border-border">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
             Generated Text Message Preview
           </span>
-          <pre className="bg-white p-3 rounded-lg border border-[#bdc9c6] text-xs font-mono text-[#111c2d] leading-relaxed whitespace-pre-wrap">
+          <pre className="bg-surface p-3 rounded-lg border border-border text-xs font-mono text-white leading-relaxed whitespace-pre-wrap">
             {summaryText}
           </pre>
         </div>
@@ -232,52 +232,52 @@ export const ShareReportModal: React.FC<Props> = ({ client, onNavigate }) => {
 
       {/* Configuration Toggles */}
       <div className="flex flex-col gap-2">
-        <h3 className="text-base font-semibold text-[#111c2d] mb-1">
+        <h3 className="text-base font-semibold text-white mb-1">
           Include in Report
         </h3>
 
-        <label className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[#f0f3ff] transition-colors cursor-pointer border border-transparent">
+        <label className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-surface-alt transition-colors cursor-pointer border border-transparent">
           <input
             type="checkbox"
             checked={includeKeyMetrics}
             onChange={(e) => setIncludeKeyMetrics(e.target.checked)}
-            className="h-5 w-5 text-[#005c55] rounded border-[#6e7977] focus:ring-[#0f766e]"
+            className="h-5 w-5 text-accent rounded border-text-muted focus:ring-accent"
           />
-          <span className="text-sm font-medium text-[#111c2d]">
+          <span className="text-sm font-medium text-white">
             Key Metrics (Weight & Body Fat)
           </span>
         </label>
 
-        <label className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[#f0f3ff] transition-colors cursor-pointer border border-transparent">
+        <label className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-surface-alt transition-colors cursor-pointer border border-transparent">
           <input
             type="checkbox"
             checked={includeCircumferences}
             onChange={(e) => setIncludeCircumferences(e.target.checked)}
-            className="h-5 w-5 text-[#005c55] rounded border-[#6e7977] focus:ring-[#0f766e]"
+            className="h-5 w-5 text-accent rounded border-text-muted focus:ring-accent"
           />
-          <span className="text-sm font-medium text-[#111c2d]">
+          <span className="text-sm font-medium text-white">
             Circumference Changes (Waist, Chest, Hips, Arm)
           </span>
         </label>
 
-        <label className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[#f0f3ff] transition-colors cursor-pointer border border-transparent">
+        <label className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-surface-alt transition-colors cursor-pointer border border-transparent">
           <input
             type="checkbox"
             checked={includeNotes}
             onChange={(e) => setIncludeNotes(e.target.checked)}
-            className="h-5 w-5 text-[#005c55] rounded border-[#6e7977] focus:ring-[#0f766e]"
+            className="h-5 w-5 text-accent rounded border-text-muted focus:ring-accent"
           />
-          <span className="text-sm font-medium text-[#111c2d]">
+          <span className="text-sm font-medium text-white">
             Client Goal Notes & Milestones
           </span>
         </label>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-col gap-3 pt-4 border-t border-[#bdc9c6]/50">
+      <div className="flex flex-col gap-3 pt-4 border-t border-border">
         <button
           onClick={handleWhatsAppShare}
-          className="w-full bg-[#005c55] hover:bg-[#0f766e] text-white rounded-full py-4 px-6 font-semibold text-base flex items-center justify-center gap-2 shadow-sm btn-press"
+          className="w-full bg-accent hover:bg-accent-hover text-white rounded-full py-4 px-6 font-semibold text-base flex items-center justify-center gap-2 shadow-sm btn-press"
         >
           <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
             chat
@@ -287,7 +287,7 @@ export const ShareReportModal: React.FC<Props> = ({ client, onNavigate }) => {
 
         <button
           onClick={handleCopyText}
-          className="w-full bg-white text-[#005c55] border-2 border-[#005c55] hover:bg-[#e7eeff] rounded-full py-3.5 px-6 font-semibold text-base flex items-center justify-center gap-2 transition-colors"
+          className="w-full bg-surface text-accent border-2 border-accent hover:bg-surface-alt rounded-full py-3.5 px-6 font-semibold text-base flex items-center justify-center gap-2 transition-colors"
         >
           <span className="material-symbols-outlined text-xl">
             {copied ? 'check' : 'content_copy'}
