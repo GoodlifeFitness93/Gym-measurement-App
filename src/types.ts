@@ -8,6 +8,20 @@ export interface TrainerProfile {
   created_at?: string;
 }
 
+export type PhotoAngle = 'front' | 'back' | 'right_side' | 'left_side' | 'side';
+
+export interface ProgressPhoto {
+  id?: string;
+  client_id: string;
+  trainer_id: string;
+  taken_on: string; // date YYYY-MM-DD (legacy, kept for compatibility)
+  taken_at?: string; // full timestamp (ISO), editable
+  angle: PhotoAngle; // 'side' is a legacy value from before the 4-angle system
+  storage_path: string;
+  created_at?: string;
+  signed_url?: string | null;
+}
+
 export type BiologicalSex = 'male' | 'female';
 
 export type BodyCompositionMethod =
@@ -85,18 +99,23 @@ export interface CustomMeasureValue {
   value: number;
 }
 
-export type PhotoAngle = 'front' | 'back' | 'right_side' | 'left_side' | 'side';
+export type AiReportPeriod = '2w' | '1m' | '3m' | '6m';
+export type AiReportGoal = 'gain_muscle' | 'lose_fat';
 
-export interface ProgressPhoto {
-  id?: string;
-  client_id: string;
-  trainer_id: string;
-  taken_on: string; // date YYYY-MM-DD (legacy, kept for compatibility)
-  taken_at?: string; // full timestamp (ISO), editable
-  angle: PhotoAngle; // 'side' is a legacy value from before the 4-angle system
-  storage_path: string;
-  created_at?: string;
-  signed_url?: string | null;
+export interface AiReport {
+  summary: string;
+  trend: {
+    weight: string;
+    bodyFat: string;
+    perimeters: string;
+  };
+  goalProgress: string;
+  positiveChanges: string[];
+  areasToWatch: string[];
+  recommendations: string[];
+  nextSteps: string[];
+  dataQuality: string;
+  disclaimer: string;
 }
 
 export type ActiveScreen =

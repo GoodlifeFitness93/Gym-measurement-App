@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
+import { Sparkles } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, ProgressPhoto, PhotoAngle, ActiveScreen } from '../types';
 import { ClientSettingsTab } from './ClientSettingsTab';
+import { AIAnalysisModal } from './AIAnalysisModal';
 
 interface Props {
   client: Client;
@@ -81,6 +83,7 @@ export const ClientProfile: React.FC<Props> = ({
   onRefreshClient,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'measurements' | 'photos' | 'notes' | 'settings'>('overview');
+  const [showAiAnalysis, setShowAiAnalysis] = useState(false);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -563,11 +566,18 @@ export const ClientProfile: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Action Button: Share Progress Report */}
-          <div className="pt-2 flex justify-center">
+          {/* Action Buttons */}
+          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => setShowAiAnalysis(true)}
+              className="bg-surface border border-accent text-accent hover:bg-accent/10 font-semibold py-3.5 px-8 rounded-full btn-press flex items-center justify-center gap-2 w-full sm:w-auto"
+            >
+              <Sparkles className="w-4 h-4" />
+              AI-Powered Analysis
+            </button>
             <button
               onClick={() => onNavigate('share_report')}
-              className="bg-accent hover:bg-accent-hover text-white font-semibold py-3.5 px-8 rounded-full btn-press flex items-center justify-center gap-2 w-full md:w-auto"
+              className="bg-accent hover:bg-accent-hover text-white font-semibold py-3.5 px-8 rounded-full btn-press flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <span className="material-symbols-outlined text-lg">ios_share</span>
               Share Progress Report
@@ -575,6 +585,8 @@ export const ClientProfile: React.FC<Props> = ({
           </div>
         </section>
       )}
+
+      {showAiAnalysis && <AIAnalysisModal client={client} onClose={() => setShowAiAnalysis(false)} />}
 
       {/* MEASUREMENTS TAB */}
       {activeTab === 'measurements' && (
