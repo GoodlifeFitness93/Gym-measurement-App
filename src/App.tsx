@@ -12,7 +12,7 @@ import { MeasurementProgress } from './components/MeasurementProgress';
 import { ShareReportModal } from './components/ShareReportModal';
 import { NewClientWizard } from './components/wizard/NewClientWizard';
 import { SettingsScreen } from './components/SettingsScreen';
-import { ActiveScreen, Client, TrainerProfile } from './types';
+import { ActiveScreen, Client, TrainerProfile, Measurement } from './types';
 
 export default function App() {
   const [configured, setConfigured] = useState<boolean>(isSupabaseConfigured());
@@ -23,6 +23,7 @@ export default function App() {
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>('dashboard');
   const [screenHistory, setScreenHistory] = useState<ActiveScreen[]>(['dashboard']);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
   const [trainerProfile, setTrainerProfile] = useState<TrainerProfile | null>(null);
 
   // Check auth & profile
@@ -226,14 +227,27 @@ export default function App() {
             onRefreshClient={() => {
               // Refresh client state if needed
             }}
+            onEditMeasurement={(m) => {
+              setEditingMeasurement(m);
+              navigateTo('add_measurement');
+            }}
+            onAddMeasurement={() => {
+              setEditingMeasurement(null);
+              navigateTo('add_measurement');
+            }}
           />
         )}
 
         {activeScreen === 'add_measurement' && selectedClient && (
           <AddMeasurementModal
             client={selectedClient}
-            onNavigate={navigateTo}
+            editMeasurement={editingMeasurement}
+            onNavigate={(screen) => {
+              setEditingMeasurement(null);
+              navigateTo(screen);
+            }}
             onSuccess={() => {
+              setEditingMeasurement(null);
               setActiveScreen('client_profile');
             }}
           />

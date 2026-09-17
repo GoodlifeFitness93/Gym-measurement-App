@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Pencil } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, ProgressPhoto, PhotoAngle, ActiveScreen } from '../types';
 import { ClientSettingsTab } from './ClientSettingsTab';
@@ -10,6 +10,8 @@ interface Props {
   client: Client;
   onNavigate: (screen: ActiveScreen) => void;
   onRefreshClient?: () => void;
+  onEditMeasurement: (measurement: Measurement) => void;
+  onAddMeasurement: () => void;
 }
 
 const ANGLE_LABELS: Record<PhotoAngle, string> = {
@@ -81,6 +83,8 @@ export const ClientProfile: React.FC<Props> = ({
   client,
   onNavigate,
   onRefreshClient,
+  onEditMeasurement,
+  onAddMeasurement,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'measurements' | 'photos' | 'notes' | 'settings'>('overview');
   const [showAiAnalysis, setShowAiAnalysis] = useState(false);
@@ -195,6 +199,18 @@ export const ClientProfile: React.FC<Props> = ({
   const weightChange = currentWeight !== null && startWeight !== null
     ? parseFloat((currentWeight - startWeight).toFixed(1))
     : null;
+
+  const latestMeasurement = measurements.length > 0 ? measurements[measurements.length - 1] : null;
+
+  // BMI = weight(kg) / height(m)^2 — only shown when both real values are on record.
+  const bmi = latestMeasurement?.weight && client.height_cm
+    ? parseFloat((latestMeasurement.weight / ((client.height_cm / 100) ** 2)).toFixed(1))
+    : null;
+  const bmiCategory = bmi === null ? null
+    : bmi < 18.5 ? 'Underweight'
+    : bmi < 25 ? 'Healthy range'
+    : bmi < 30 ? 'Overweight'
+    : 'Obese';
 
   const startedDateFormatted = client.created_at
     ? new Date(client.created_at).toLocaleDateString('en-US', {
@@ -523,6 +539,54 @@ export const ClientProfile: React.FC<Props> = ({
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
         <section className="space-y-6">
+          {/* Last Measurement */}
+          <div className="bg-surface rounded-xl p-4 md:p-6 border border-border">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Last Measurement</span>
+                <p className="text-white font-semibold">
+                  {latestMeasurement
+                    ? new Date(latestMeasurement.measured_on).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : 'No measurements yet.'}
+                </p>
+              </div>
+              {measurements.length > 0 && (
+                <button
+                  onClick={() => setActiveTab('measurements')}
+                  className="text-xs font-semibold text-accent hover:underline uppercase tracking-wider"
+                >
+                  See All ({measurements.length}) →
+                </button>
+              )}
+            </div>
+
+            {latestMeasurement && (
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-surface-alt rounded-lg p-2.5 text-center">
+                  <span className="block text-[10px] uppercase text-text-muted mb-1">Weight</span>
+                  <span className="text-sm font-bold text-white">{latestMeasurement.weight != null ? `${latestMeasurement.weight} kg` : '—'}</span>
+                </div>
+                <div className="bg-surface-alt rounded-lg p-2.5 text-center">
+                  <span className="block text-[10px] uppercase text-text-muted mb-1">Fat</span>
+                  <span className="text-sm font-bold text-white">{latestMeasurement.body_fat_percent != null ? `${latestMeasurement.body_fat_percent}%` : '—'}</span>
+                </div>
+                <div className="bg-surface-alt rounded-lg p-2.5 text-center">
+                  <span className="block text-[10px] uppercase text-text-muted mb-1">BMI</span>
+                  <span className="text-sm font-bold text-white">{bmi ?? '—'}</span>
+                  {bmiCategory && <span className="block text-[10px] text-accent">{bmiCategory}</span>}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={onAddMeasurement}
+              className="w-full bg-accent hover:bg-accent-hover text-white font-semibold py-3 rounded-lg btn-press flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-lg">add</span>
+              New Measurement
+            </button>
+          </div>
+
           {/* Chart Card */}
           <div className="bg-surface rounded-xl p-4 md:p-6 border border-border">
             <div className="flex justify-between items-center mb-4">
@@ -601,7 +665,7 @@ export const ClientProfile: React.FC<Props> = ({
                 Graph View
               </button>
               <button
-                onClick={() => onNavigate('add_measurement')}
+                onClick={onAddMeasurement}
                 className="text-xs font-semibold uppercase tracking-wider bg-accent text-white px-3 py-1.5 rounded-lg hover:bg-accent-hover"
               >
                 + Add Entry
@@ -616,7 +680,7 @@ export const ClientProfile: React.FC<Props> = ({
               </span>
               <p className="text-sm font-semibold text-white">No measurements recorded yet</p>
               <button
-                onClick={() => onNavigate('add_measurement')}
+                onClick={onAddMeasurement}
                 className="mt-3 bg-accent text-white text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-lg"
               >
                 Log First Measurement
@@ -635,7 +699,12 @@ export const ClientProfile: React.FC<Props> = ({
                   : `Entry #${idx + 1}`;
 
                 return (
-                  <div key={m.id || idx} className="p-4 hover:bg-surface-alt transition-colors">
+                  <button
+                    key={m.id || idx}
+                    type="button"
+                    onClick={() => onEditMeasurement(m)}
+                    className="w-full text-left p-4 hover:bg-surface-alt transition-colors"
+                  >
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-bold text-accent">
                         {formattedDate}
@@ -645,8 +714,9 @@ export const ClientProfile: React.FC<Props> = ({
                           </span>
                         )}
                       </span>
-                      <span className="text-base font-bold text-white">
+                      <span className="text-base font-bold text-white flex items-center gap-1.5">
                         {m.weight !== null && m.weight !== undefined ? `${m.weight} kg` : '—'}
+                        <Pencil className="w-3.5 h-3.5 text-text-muted" />
                       </span>
                     </div>
 
@@ -662,7 +732,7 @@ export const ClientProfile: React.FC<Props> = ({
                         );
                       })}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

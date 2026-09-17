@@ -44,7 +44,11 @@ export const AIAnalysisModal: React.FC<Props> = ({ client, onClose }) => {
           target_body_fat: targetBodyFat ? parseFloat(targetBodyFat) : null,
         },
       });
-      if (fnErr) throw fnErr;
+      if (fnErr) {
+        // supabase-js only gives a generic message on non-2xx; the real reason is in the response body.
+        const body = await (fnErr as any)?.context?.json?.().catch(() => null);
+        throw new Error(body?.error || fnErr.message);
+      }
       if (!data?.success) throw new Error(data?.error || 'Failed to generate report');
       setReport(data.report as AiReport);
       setStep(4);

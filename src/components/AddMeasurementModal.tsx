@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Info, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
-import { Client, ActiveScreen, CustomMeasure } from '../types';
+import { Client, ActiveScreen, CustomMeasure, Measurement } from '../types';
 import { PERIMETERS, PerimeterId } from '../lib/perimeters';
 import { cmToIn, inToCm, parsePerimeterInput } from '../lib/units';
 import { PerimeterInstructionsModal } from './PerimeterInstructionsModal';
@@ -11,6 +11,7 @@ interface Props {
   client: Client;
   onNavigate: (screen: ActiveScreen) => void;
   onSuccess: () => void;
+  editMeasurement?: Measurement | null;
 }
 
 const inputClass =
@@ -20,18 +21,28 @@ export const AddMeasurementModal: React.FC<Props> = ({
   client,
   onNavigate,
   onSuccess,
+  editMeasurement,
 }) => {
-  const [unit, setUnit] = useState<'metric' | 'imperial'>(client.unit_system || 'metric');
+  const isEditing = !!editMeasurement;
+  const [unit, setUnit] = useState<'metric' | 'imperial'>(editMeasurement?.unit || client.unit_system || 'metric');
   const [perimeterUnit, setPerimeterUnit] = useState<'cm' | 'in'>(
     client.unit_system === 'imperial' ? 'in' : 'cm'
   );
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [sessionName, setSessionName] = useState<string>('');
+  const [date, setDate] = useState<string>(editMeasurement?.measured_on || new Date().toISOString().split('T')[0]);
+  const [sessionName, setSessionName] = useState<string>(editMeasurement?.session_name || '');
 
-  const [weight, setWeight] = useState<string>('');
-  const [bodyFat, setBodyFat] = useState<string>('');
-  const [perimeterValues, setPerimeterValues] = useState<Record<string, string>>({});
-  const [notes, setNotes] = useState<string>('');
+  const [weight, setWeight] = useState<string>(editMeasurement?.weight != null ? String(editMeasurement.weight) : '');
+  const [bodyFat, setBodyFat] = useState<string>(editMeasurement?.body_fat_percent != null ? String(editMeasurement.body_fat_percent) : '');
+  const [perimeterValues, setPerimeterValues] = useState<Record<string, string>>(() => {
+    if (!editMeasurement) return {};
+    const initial: Record<string, string> = {};
+    for (const p of PERIMETERS) {
+      const val = (editMeasurement as any)[p.dbColumn];
+      if (val != null) initial[p.id] = String(val);
+    }
+    return initial;
+  });
+  const [notes, setNotes] = useState<string>(editMeasurement?.notes || '');
 
   const [customMeasures, setCustomMeasures] = useState<CustomMeasure[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
@@ -43,6 +54,8 @@ export const AddMeasurementModal: React.FC<Props> = ({
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const inputRefs = useRef<Partial<Record<PerimeterId, HTMLInputElement | null>>>({});
 
@@ -62,9 +75,38 @@ export const AddMeasurementModal: React.FC<Props> = ({
         .eq('trainer_id', user.id)
         .order('created_at', { ascending: true });
       if (data) setCustomMeasures(data);
+
+      if (editMeasurement?.id) {
+        const { data: existingValues } = await supabase
+          .from('custom_measure_values')
+          .select('custom_measure_id, value')
+          .eq('measurement_id', editMeasurement.id);
+        if (existingValues) {
+          const prefill: Record<string, string> = {};
+          for (const v of existingValues) prefill[v.custom_measure_id] = String(v.value);
+          setCustomValues(prefill);
+        }
+      }
     };
     fetchCustomMeasures();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleDelete = async () => {
+    if (!editMeasurement?.id) return;
+    setDeleting(true);
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error('Supabase client not initialized');
+      const { error: delErr } = await supabase.from('measurements').delete().eq('id', editMeasurement.id);
+      if (delErr) throw delErr;
+      onSuccess();
+      onNavigate('client_profile');
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete measurement.');
+      setDeleting(false);
+    }
+  };
 
   const handlePerimeterChange = (id: PerimeterId, value: string) => {
     setPerimeterValues((prev) => ({ ...prev, [id]: value }));
@@ -139,18 +181,29 @@ export const AddMeasurementModal: React.FC<Props> = ({
         record[p.dbColumn] = raw === null ? null : parsePerimeterInput(raw, perimeterUnit);
       }
 
-      const { data: inserted, error: insertErr } = await supabase
-        .from('measurements')
-        .insert(record)
-        .select()
-        .single();
-
-      if (insertErr) throw insertErr;
+      let measurementId = editMeasurement?.id;
+      if (isEditing && measurementId) {
+        const { error: updateErr } = await supabase
+          .from('measurements')
+          .update(record)
+          .eq('id', measurementId);
+        if (updateErr) throw updateErr;
+        // Replace custom measure values wholesale — simplest correct way to keep them in sync.
+        await supabase.from('custom_measure_values').delete().eq('measurement_id', measurementId);
+      } else {
+        const { data: inserted, error: insertErr } = await supabase
+          .from('measurements')
+          .insert(record)
+          .select()
+          .single();
+        if (insertErr) throw insertErr;
+        measurementId = inserted.id;
+      }
 
       const customRows = customMeasures
         .filter((m) => customValues[m.id] && customValues[m.id].trim() !== '')
         .map((m) => ({
-          measurement_id: inserted.id,
+          measurement_id: measurementId,
           custom_measure_id: m.id,
           trainer_id: user.id,
           value: parseFloat(customValues[m.id]),
@@ -178,8 +231,8 @@ export const AddMeasurementModal: React.FC<Props> = ({
     <main className="max-w-md mx-auto px-5 py-6 pb-32 font-['Inter',sans-serif]">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-2xl font-semibold text-white">Add Measurement</h2>
-          <p className="text-xs text-text-muted">Logging entry for {client.name}</p>
+          <h2 className="text-2xl font-semibold text-white">{isEditing ? 'Edit Measurement' : 'Add Measurement'}</h2>
+          <p className="text-xs text-text-muted">{isEditing ? 'Editing entry for' : 'Logging entry for'} {client.name}</p>
         </div>
 
         <div className="bg-surface-alt p-1 rounded-lg border border-border flex gap-1">
@@ -420,10 +473,10 @@ export const AddMeasurementModal: React.FC<Props> = ({
           />
         </div>
 
-        <div className="pt-2">
+        <div className="pt-2 space-y-3">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || deleting}
             className="w-full bg-accent hover:bg-accent-hover text-white font-semibold text-lg py-3 rounded-lg btn-press flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading ? (
@@ -431,14 +484,52 @@ export const AddMeasurementModal: React.FC<Props> = ({
             ) : (
               <>
                 <span className="material-symbols-outlined">save</span>
-                Save Measurement
+                {isEditing ? 'Save Changes' : 'Save Measurement'}
               </>
             )}
           </button>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              disabled={loading || deleting}
+              className="w-full flex items-center justify-center gap-1.5 text-danger text-sm font-semibold py-2 disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Measurement
+            </button>
+          )}
         </div>
       </form>
 
       {showInstructions && <PerimeterInstructionsModal onClose={() => setShowInstructions(false)} />}
+
+      {confirmingDelete && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-surface border border-border rounded-xl max-w-sm w-full p-5 space-y-3">
+            <h3 className="text-lg font-semibold text-white">Delete this measurement?</h3>
+            <p className="text-sm text-text-muted">
+              This permanently removes this measurement entry ({date}). It will not affect the rest of {client.name}'s profile. This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deleting}
+                className="px-4 py-2 text-xs font-semibold uppercase text-text-muted hover:bg-surface-alt rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-danger text-white text-xs font-semibold uppercase tracking-wider rounded-lg disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
