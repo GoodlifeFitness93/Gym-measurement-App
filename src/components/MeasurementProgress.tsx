@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, ActiveScreen } from '../types';
 
-type ChartableMetric =
+export type ChartableMetric =
   | 'weight'
   | 'body_fat_percent'
   | 'chest'
@@ -17,7 +17,7 @@ type ChartableMetric =
   | 'thigh'
   | 'calf';
 
-const METRIC_LABELS: Record<ChartableMetric, { label: string; unit: string }> = {
+export const METRIC_LABELS: Record<ChartableMetric, { label: string; unit: string }> = {
   weight: { label: 'Weight', unit: 'kg' },
   body_fat_percent: { label: 'Body Fat', unit: '%' },
   waist: { label: 'Waist', unit: 'cm' },
@@ -49,10 +49,11 @@ const RANGE_DAYS: Record<'1W' | '1M' | '3M' | '6M' | 'ALL', number | null> = {
 interface Props {
   client: Client;
   onNavigate: (screen: ActiveScreen) => void;
+  initialMetric?: ChartableMetric;
 }
 
-export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => {
-  const [selectedMetric, setSelectedMetric] = useState<ChartableMetric>('weight');
+export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate, initialMetric }) => {
+  const [selectedMetric, setSelectedMetric] = useState<ChartableMetric>(initialMetric || 'weight');
   const [dateRange, setDateRange] = useState<'1W' | '1M' | '3M' | '6M' | 'ALL'>('3M');
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,6 +137,46 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => 
   const lastChartDate = chartPoints && chartPoints[chartPoints.length - 1].date
     ? new Date(chartPoints[chartPoints.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
+
+  // This week / last week average for the selected metric (Mon-Sun weeks), matching the reference Weight screen.
+  const weeklyAverages = useMemo(() => {
+    const startOfWeek = (d: Date) => {
+      const day = d.getDay();
+      const diff = (day === 0 ? -6 : 1) - day; // shift to Monday
+      const start = new Date(d);
+      start.setDate(d.getDate() + diff);
+      start.setHours(0, 0, 0, 0);
+      return start;
+    };
+    const thisWeekStart = startOfWeek(new Date());
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+
+    const avgInRange = (start: Date, end: Date) => {
+      const vals = measurements
+        .filter((m) => {
+          const d = m.measured_on || m.created_at;
+          if (!d) return false;
+          const t = new Date(d).getTime();
+          return t >= start.getTime() && t < end.getTime();
+        })
+        .map((m) => m[selectedMetric])
+        .filter((v): v is number => v !== null && v !== undefined);
+      if (vals.length === 0) return null;
+      return parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1));
+    };
+
+    const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '/');
+    const thisWeekEnd = new Date(thisWeekStart); thisWeekEnd.setDate(thisWeekStart.getDate() + 7);
+    const lastWeekEnd = thisWeekStart;
+
+    return {
+      thisWeek: avgInRange(thisWeekStart, thisWeekEnd),
+      thisWeekRange: `${fmt(thisWeekStart)} - ${fmt(new Date(thisWeekEnd.getTime() - 86400000))}`,
+      lastWeek: avgInRange(lastWeekStart, lastWeekEnd),
+      lastWeekRange: `${fmt(lastWeekStart)} - ${fmt(new Date(lastWeekEnd.getTime() - 86400000))}`,
+    };
+  }, [measurements, selectedMetric]);
 
   // Overall trend across the selected range
   const firstM = rangeFilteredMeasurements.length > 0 ? rangeFilteredMeasurements[0] : null;
@@ -278,6 +319,24 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate }) => 
           >
             Log Entry
           </button>
+        </div>
+
+        {/* This week / last week average */}
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="bg-surface-alt rounded-lg p-3">
+            <span className="block text-[10px] uppercase text-text-muted mb-1">This Week's Average</span>
+            <span className="text-lg font-bold text-white">
+              {weeklyAverages.thisWeek !== null ? `${weeklyAverages.thisWeek} ${METRIC_LABELS[selectedMetric].unit}` : '—'}
+            </span>
+            <span className="block text-[10px] text-text-muted mt-1">{weeklyAverages.thisWeekRange}</span>
+          </div>
+          <div className="bg-surface-alt rounded-lg p-3">
+            <span className="block text-[10px] uppercase text-text-muted mb-1">Last Week's Average</span>
+            <span className="text-lg font-bold text-white">
+              {weeklyAverages.lastWeek !== null ? `${weeklyAverages.lastWeek} ${METRIC_LABELS[selectedMetric].unit}` : '—'}
+            </span>
+            <span className="block text-[10px] text-text-muted mt-1">{weeklyAverages.lastWeekRange}</span>
+          </div>
         </div>
       </section>
 

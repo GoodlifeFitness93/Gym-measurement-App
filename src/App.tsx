@@ -13,6 +13,7 @@ import { ShareReportModal } from './components/ShareReportModal';
 import { NewClientWizard } from './components/wizard/NewClientWizard';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ActiveScreen, Client, TrainerProfile, Measurement } from './types';
+import type { ChartableMetric } from './components/MeasurementProgress';
 
 export default function App() {
   const [configured, setConfigured] = useState<boolean>(isSupabaseConfigured());
@@ -24,6 +25,7 @@ export default function App() {
   const [screenHistory, setScreenHistory] = useState<ActiveScreen[]>(['dashboard']);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
+  const [progressMetric, setProgressMetric] = useState<ChartableMetric | undefined>(undefined);
   const [trainerProfile, setTrainerProfile] = useState<TrainerProfile | null>(null);
 
   // Check auth & profile
@@ -235,6 +237,10 @@ export default function App() {
               setEditingMeasurement(null);
               navigateTo('add_measurement');
             }}
+            onViewProgress={(metric) => {
+              setProgressMetric(metric);
+              navigateTo('measurement_progress');
+            }}
           />
         )}
 
@@ -256,6 +262,7 @@ export default function App() {
         {activeScreen === 'measurement_progress' && selectedClient && (
           <MeasurementProgress
             client={selectedClient}
+            initialMetric={progressMetric}
             onNavigate={navigateTo}
           />
         )}

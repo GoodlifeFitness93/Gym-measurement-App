@@ -5,6 +5,9 @@ import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, ProgressPhoto, PhotoAngle, ActiveScreen } from '../types';
 import { ClientSettingsTab } from './ClientSettingsTab';
 import { AIAnalysisModal } from './AIAnalysisModal';
+import { BodyCompositionModal } from './BodyCompositionModal';
+import { CompareMeasurementsModal } from './CompareMeasurementsModal';
+import type { ChartableMetric } from './MeasurementProgress';
 
 interface Props {
   client: Client;
@@ -12,6 +15,7 @@ interface Props {
   onRefreshClient?: () => void;
   onEditMeasurement: (measurement: Measurement) => void;
   onAddMeasurement: () => void;
+  onViewProgress: (metric: ChartableMetric) => void;
 }
 
 const ANGLE_LABELS: Record<PhotoAngle, string> = {
@@ -85,9 +89,13 @@ export const ClientProfile: React.FC<Props> = ({
   onRefreshClient,
   onEditMeasurement,
   onAddMeasurement,
+  onViewProgress,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'measurements' | 'photos' | 'notes' | 'settings'>('overview');
   const [showAiAnalysis, setShowAiAnalysis] = useState(false);
+  const [showBodyComposition, setShowBodyComposition] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSelection, setCompareSelection] = useState<string[]>([]);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -630,15 +638,56 @@ export const ClientProfile: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => setShowAiAnalysis(true)}
-              className="bg-surface border border-accent text-accent hover:bg-accent/10 font-semibold py-3.5 px-8 rounded-full btn-press flex items-center justify-center gap-2 w-full sm:w-auto"
-            >
-              <Sparkles className="w-4 h-4" />
-              AI-Powered Analysis
-            </button>
+          {/* My Progress */}
+          <div>
+            <h3 className="text-xl font-semibold text-white mb-3">My Progress</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowAiAnalysis(true)}
+                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
+              >
+                <Sparkles className="w-5 h-5 text-accent" />
+                <span className="text-sm font-semibold text-white">AI-Powered Analysis</span>
+              </button>
+              <button
+                onClick={() => onViewProgress('weight')}
+                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
+              >
+                <span className="material-symbols-outlined text-accent text-xl">monitor_weight</span>
+                <span className="text-sm font-semibold text-white">Weight</span>
+              </button>
+              <button
+                onClick={() => setShowBodyComposition(true)}
+                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
+              >
+                <span className="material-symbols-outlined text-accent text-xl">accessibility_new</span>
+                <span className="text-sm font-semibold text-white">Body Composition</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('photos')}
+                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
+              >
+                <span className="material-symbols-outlined text-accent text-xl">photo_camera</span>
+                <span className="text-sm font-semibold text-white">Photos</span>
+              </button>
+              <button
+                onClick={() => onViewProgress('chest')}
+                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
+              >
+                <span className="material-symbols-outlined text-accent text-xl">straighten</span>
+                <span className="text-sm font-semibold text-white">Perimeters</span>
+              </button>
+              <button
+                onClick={() => onViewProgress('body_fat_percent')}
+                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
+              >
+                <span className="material-symbols-outlined text-accent text-xl">bloodtype</span>
+                <span className="text-sm font-semibold text-white">Fat</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
             <button
               onClick={() => onNavigate('share_report')}
               className="bg-accent hover:bg-accent-hover text-white font-semibold py-3.5 px-8 rounded-full btn-press flex items-center justify-center gap-2 w-full sm:w-auto"
@@ -651,13 +700,26 @@ export const ClientProfile: React.FC<Props> = ({
       )}
 
       {showAiAnalysis && <AIAnalysisModal client={client} onClose={() => setShowAiAnalysis(false)} />}
+      {showBodyComposition && (
+        <BodyCompositionModal client={client} measurements={measurements} onClose={() => setShowBodyComposition(false)} />
+      )}
 
       {/* MEASUREMENTS TAB */}
       {activeTab === 'measurements' && (
         <section className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center flex-wrap gap-2">
             <h3 className="text-xl font-semibold text-white">Logged Measurements</h3>
             <div className="flex items-center gap-2">
+              {measurements.length >= 2 && (
+                <button
+                  onClick={() => { setCompareMode((v) => !v); setCompareSelection([]); }}
+                  className={`text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-lg border ${
+                    compareMode ? 'bg-accent text-white border-accent' : 'text-accent border-accent hover:bg-accent/10'
+                  }`}
+                >
+                  {compareMode ? 'Cancel Compare' : 'Compare'}
+                </button>
+              )}
               <button
                 onClick={() => onNavigate('measurement_progress')}
                 className="text-xs font-semibold uppercase tracking-wider text-accent border border-accent px-3 py-1.5 rounded-lg hover:bg-accent/10"
@@ -672,6 +734,12 @@ export const ClientProfile: React.FC<Props> = ({
               </button>
             </div>
           </div>
+
+          {compareMode && (
+            <div className="bg-accent/10 border border-accent/20 rounded-lg px-4 py-2.5 text-sm text-accent">
+              {compareSelection.length < 2 ? 'Select 2 measurements to compare' : 'Opening comparison...'}
+            </div>
+          )}
 
           {measurements.length === 0 ? (
             <div className="bg-surface rounded-xl p-8 text-center border border-border">
@@ -698,15 +766,32 @@ export const ClientProfile: React.FC<Props> = ({
                     })
                   : `Entry #${idx + 1}`;
 
+                const isSelected = !!(m.id && compareSelection.includes(m.id));
+
                 return (
                   <button
                     key={m.id || idx}
                     type="button"
-                    onClick={() => onEditMeasurement(m)}
-                    className="w-full text-left p-4 hover:bg-surface-alt transition-colors"
+                    onClick={() => {
+                      if (compareMode) {
+                        if (!m.id) return;
+                        setCompareSelection((prev) => {
+                          const next = prev.includes(m.id!) ? prev.filter((id) => id !== m.id) : [...prev, m.id!].slice(-2);
+                          return next;
+                        });
+                        return;
+                      }
+                      onEditMeasurement(m);
+                    }}
+                    className={`w-full text-left p-4 transition-colors ${isSelected ? 'bg-accent/10' : 'hover:bg-surface-alt'}`}
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-bold text-accent">
+                      <span className="text-sm font-bold text-accent flex items-center gap-2">
+                        {compareMode && (
+                          <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-accent border-accent' : 'border-border'}`}>
+                            {isSelected && <span className="w-2 h-2 bg-white rounded-sm" />}
+                          </span>
+                        )}
                         {formattedDate}
                         {m.session_name && (
                           <span className="ml-2 text-[10px] font-bold uppercase bg-accent/15 text-accent px-1.5 py-0.5 rounded normal-case">
@@ -716,7 +801,7 @@ export const ClientProfile: React.FC<Props> = ({
                       </span>
                       <span className="text-base font-bold text-white flex items-center gap-1.5">
                         {m.weight !== null && m.weight !== undefined ? `${m.weight} kg` : '—'}
-                        <Pencil className="w-3.5 h-3.5 text-text-muted" />
+                        {!compareMode && <Pencil className="w-3.5 h-3.5 text-text-muted" />}
                       </span>
                     </div>
 
@@ -738,6 +823,14 @@ export const ClientProfile: React.FC<Props> = ({
             </div>
           )}
         </section>
+      )}
+
+      {compareMode && compareSelection.length === 2 && (
+        <CompareMeasurementsModal
+          a={measurements.find((m) => m.id === compareSelection[0])!}
+          b={measurements.find((m) => m.id === compareSelection[1])!}
+          onClose={() => { setCompareMode(false); setCompareSelection([]); }}
+        />
       )}
 
       {/* PHOTOS TAB */}
