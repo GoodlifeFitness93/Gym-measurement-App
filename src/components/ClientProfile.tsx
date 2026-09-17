@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
-import { Sparkles, Pencil } from 'lucide-react';
+import { Sparkles, Pencil, Camera, Images, X as XIcon } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, ProgressPhoto, PhotoAngle, ActiveScreen } from '../types';
 import { ClientSettingsTab } from './ClientSettingsTab';
@@ -103,6 +103,8 @@ export const ClientProfile: React.FC<Props> = ({
 
   // Photo Upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [sourceChoiceAngle, setSourceChoiceAngle] = useState<PhotoAngle | null>(null);
   const [pendingAngle, setPendingAngle] = useState<PhotoAngle | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [photoDateTime, setPhotoDateTime] = useState<string>('');
@@ -247,8 +249,19 @@ export const ClientProfile: React.FC<Props> = ({
 
   // Photo Upload Handlers
   const openPicker = (angle: PhotoAngle) => {
-    setPendingAngle(angle);
     setUploadError(null);
+    setSourceChoiceAngle(angle);
+  };
+
+  const chooseCamera = () => {
+    setPendingAngle(sourceChoiceAngle);
+    setSourceChoiceAngle(null);
+    cameraInputRef.current?.click();
+  };
+
+  const chooseGallery = () => {
+    setPendingAngle(sourceChoiceAngle);
+    setSourceChoiceAngle(null);
     fileInputRef.current?.click();
   };
 
@@ -883,6 +896,14 @@ export const ClientProfile: React.FC<Props> = ({
               className="hidden"
               onChange={handleFileSelected}
             />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileSelected}
+            />
             {UPLOAD_ANGLES.map((angle) => (
               <button
                 key={angle}
@@ -1097,6 +1118,42 @@ export const ClientProfile: React.FC<Props> = ({
           onRefreshClient={() => onRefreshClient && onRefreshClient()}
           onRefreshMeasurements={fetchData}
         />
+      )}
+
+      {/* PHOTO SOURCE CHOICE (Camera / Gallery) */}
+      {sourceChoiceAngle && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setSourceChoiceAngle(null)}
+        >
+          <div
+            className="bg-surface border border-border rounded-t-2xl sm:rounded-2xl w-full sm:max-w-xs p-5 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-white">Add {ANGLE_LABELS[sourceChoiceAngle]} Photo</h3>
+              <button onClick={() => setSourceChoiceAngle(null)} aria-label="Close" className="p-1.5 rounded-full bg-surface-alt hover:bg-border text-text-muted">
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              onClick={chooseCamera}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-surface-alt hover:bg-border rounded-lg text-white"
+            >
+              <Camera className="w-5 h-5 text-accent" />
+              <span className="font-medium">Camera</span>
+            </button>
+            <button
+              onClick={chooseGallery}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-surface-alt hover:bg-border rounded-lg text-white"
+            >
+              <Images className="w-5 h-5 text-accent" />
+              <span className="font-medium">Gallery</span>
+            </button>
+          </div>
+        </div>
       )}
 
       {/* UPLOAD PHOTO MODAL */}
