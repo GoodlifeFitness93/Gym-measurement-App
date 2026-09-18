@@ -101,21 +101,52 @@ export interface CustomMeasureValue {
 
 export type AiReportPeriod = '2w' | '1m' | '3m' | '6m';
 export type AiReportGoal = 'gain_muscle' | 'lose_fat';
+export type AiReportLanguage = 'en' | 'mr_en';
+
+/**
+ * One "Progress at a glance" tile. Computed server-side from real measurements
+ * and returned alongside the model's prose, so the numbers shown can never be
+ * altered by generation or translation.
+ */
+export interface AiGlanceTile {
+  label: string;
+  unit: string;
+  from: number | null;
+  to: number;
+  change: number | null;
+  changePct: number | null;
+  direction: 'increase' | 'decrease' | 'no change' | 'none';
+  good: boolean | null;
+  note: string | null;
+}
+
+export interface AiGoalProgress {
+  targetBodyFat: number;
+  currentBodyFat: number;
+  gap: number;
+  aboveTarget: boolean;
+}
 
 export interface AiReport {
+  language: AiReportLanguage;
+  periodLabel: string;
+  periodStart?: string;
+  periodEnd?: string;
+  measurementCount?: number;
+  /** Numeric tiles — server-computed, not model output. */
+  glance: AiGlanceTile[];
   summary: string;
-  trend: {
-    weight: string;
-    bodyFat: string;
-    perimeters: string;
-  };
-  goalProgress: string;
-  positiveChanges: string[];
-  areasToWatch: string[];
-  recommendations: string[];
-  nextSteps: string[];
+  whatsGoingWell: string[];
+  focusNext: string[];
+  goalProgress: AiGoalProgress | null;
+  goalStatement: string;
+  trainerInsight: string;
+  nextCheckIn: string[];
+  /** Easy-language lines the trainer can send straight to the client. */
+  clientMessage: string;
   dataQuality: string;
   disclaimer: string;
+  bodyFatSource?: 'measured' | 'us_navy' | 'none';
 }
 
 export type ActiveScreen =

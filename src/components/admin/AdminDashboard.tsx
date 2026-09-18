@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getSupabase } from '../../lib/supabase';
+import { Modal } from '../ui/Modal';
 
 interface AdminTrainer {
   id: string;
@@ -127,7 +128,7 @@ export const AdminDashboard: React.FC<Props> = ({ adminId, adminName, onLogout }
 
   return (
     <div className="min-h-screen bg-ink text-white font-['Inter',sans-serif]">
-      <header className="w-full sticky top-0 z-50 bg-ink border-b border-border shadow-sm">
+      <header className="w-full sticky top-0 z-20 bg-ink border-b border-border shadow-sm">
         <div className="flex items-center justify-between px-5 py-4 w-full max-w-5xl mx-auto">
           <div>
             <h1 className="font-extrabold text-xl text-accent tracking-tight">Goodlife Fitness</h1>
@@ -219,44 +220,39 @@ export const AdminDashboard: React.FC<Props> = ({ adminId, adminName, onLogout }
 
       {/* Confirmation Dialog */}
       {confirmTarget && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl border border-border">
-            <h3 className="text-lg font-bold text-accent">
-              {confirmTarget.is_active ? 'Deactivate' : 'Activate'} {confirmTarget.full_name}?
-            </h3>
-            {confirmTarget.is_active ? (
-              <p className="text-sm text-text-muted">
-                They will no longer be able to sign in to Goodlife Fitness. Their existing clients,
-                measurements, and progress photos remain fully intact and are not deleted. You can
-                reactivate this account at any time.
-              </p>
-            ) : (
-              <p className="text-sm text-text-muted">
-                They will regain access to Goodlife Fitness with their existing email and password.
-                All of their clients, measurements, and progress photos are still available.
-              </p>
-            )}
-            <div className="flex justify-end gap-2 pt-2">
+        <Modal
+          title={`${confirmTarget.is_active ? 'Deactivate' : 'Activate'} ${confirmTarget.full_name}?`}
+          onClose={() => setConfirmTarget(null)}
+          size="md"
+          dismissOnBackdrop={false}
+          footer={
+            <div className="flex gap-2">
               <button
                 onClick={() => setConfirmTarget(null)}
-                className="px-4 py-2 text-xs font-semibold uppercase text-text-muted hover:bg-surface-alt rounded-lg"
+                className="flex-1 border border-border text-text-muted py-3 rounded-lg font-semibold"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleToggleActive(confirmTarget)}
                 disabled={busyId === confirmTarget.id}
-                className={`px-6 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg btn-press shadow ${
+                className={`flex-1 font-semibold py-3 rounded-lg btn-press disabled:opacity-60 ${
                   confirmTarget.is_active
                     ? 'bg-danger text-white hover:bg-danger/80'
                     : 'bg-accent text-white hover:bg-accent-hover'
                 }`}
               >
-                {busyId === confirmTarget.id ? 'Working...' : confirmTarget.is_active ? 'Deactivate' : 'Activate'}
+                {busyId === confirmTarget.id ? 'Working…' : confirmTarget.is_active ? 'Deactivate' : 'Activate'}
               </button>
             </div>
-          </div>
-        </div>
+          }
+        >
+          <p className="p-5 text-sm text-text-muted">
+            {confirmTarget.is_active
+              ? 'They will no longer be able to sign in to Goodlife Fitness. Their existing clients, measurements, and progress photos remain fully intact and are not deleted. You can reactivate this account at any time.'
+              : 'They will regain access to Goodlife Fitness with their existing email and password. All of their clients, measurements, and progress photos are still available.'}
+          </p>
+        </Modal>
       )}
     </div>
   );

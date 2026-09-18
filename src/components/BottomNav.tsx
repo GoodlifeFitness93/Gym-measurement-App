@@ -12,8 +12,11 @@ export const BottomNav: React.FC<Props> = ({ activeScreen, onNavigate }) => {
   const isSettings = activeScreen === 'settings';
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 rounded-t-xl bg-surface border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.25)]">
-      <div className="flex justify-around items-center h-16 w-full px-4 pb-safe">
+    <nav
+      aria-label="Primary"
+      className="md:hidden fixed bottom-0 left-0 w-full z-20 rounded-t-xl bg-surface border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.25)] pb-safe"
+    >
+      <div className="flex justify-around items-center h-16 w-full px-4">
         {/* Dashboard */}
         <button
           onClick={() => onNavigate('dashboard')}

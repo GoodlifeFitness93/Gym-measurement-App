@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { pushBackHandler, removeBackHandler } from './lib/backStack';
 import { isSupabaseConfigured, getSupabase } from './lib/supabase';
 import { AuthScreen } from './components/AuthScreen';
 import { AdminDashboard } from './components/admin/AdminDashboard';
@@ -20,9 +21,10 @@ export default function App() {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  // App navigation state
-  const [activeScreen, setActiveScreen] = useState<ActiveScreen>('dashboard');
+  // App navigation state. `screenHistory` is the single source of truth — the
+  // last entry is the visible screen. Android/browser Back pops it.
   const [screenHistory, setScreenHistory] = useState<ActiveScreen[]>(['dashboard']);
+  const activeScreen = screenHistory[screenHistory.length - 1];
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
   const [progressMetric, setProgressMetric] = useState<ChartableMetric | undefined>(undefined);
@@ -90,28 +92,46 @@ export default function App() {
     }
   };
 
+  // Drill down one level (Client -> Weight -> Measurement detail ...).
   const navigateTo = (screen: ActiveScreen) => {
-    setActiveScreen(screen);
-    setScreenHistory((prev) => [...prev, screen]);
+    setScreenHistory((prev) => {
+      // Navigating to a screen already in the stack means "go back to it"
+      // (e.g. Cancel on Add Measurement -> Client Profile), never a new level.
+      const idx = prev.lastIndexOf(screen);
+      if (idx !== -1) return idx === prev.length - 1 ? prev : prev.slice(0, idx + 1);
+      return [...prev, screen];
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Bottom-nav / header tabs are roots: they reset the stack instead of
+  // stacking endlessly, so Back from a tab root exits rather than looping.
+  const navigateRoot = (screen: ActiveScreen) => {
+    setScreenHistory([screen]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBack = () => {
-    if (activeScreen === 'share_report' || activeScreen === 'add_measurement' || activeScreen === 'measurement_progress') {
-      setActiveScreen('client_profile');
-    } else if (activeScreen === 'client_profile') {
-      setActiveScreen('client_list');
-    } else if (screenHistory.length > 1) {
-      const newHistory = [...screenHistory];
-      newHistory.pop(); // remove current
-      const prevScreen = newHistory[newHistory.length - 1] || 'dashboard';
-      setScreenHistory(newHistory);
-      setActiveScreen(prevScreen);
-    } else {
-      setActiveScreen('dashboard');
-    }
+    setScreenHistory((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Android system Back / browser Back pops one screen while internal history
+  // exists. Modals register their own handler on top of this one.
+  const backRef = useRef(handleBack);
+  backRef.current = handleBack;
+  const depthRef = useRef(screenHistory.length);
+  depthRef.current = screenHistory.length;
+  const deep = screenHistory.length > 1;
+
+  useEffect(() => {
+    if (!deep) return;
+    const id = pushBackHandler(() => {
+      backRef.current();
+      return depthRef.current > 2; // stay registered while still nested
+    });
+    return () => removeBackHandler(id);
+  }, [deep]);
 
   // Render 1: Supabase Credentials Missing (developer-facing only; never shown to end users)
   if (!configured) {
@@ -200,13 +220,14 @@ export default function App() {
       {/* Top Header */}
       <Header
         activeScreen={activeScreen}
-        onNavigate={navigateTo}
+        onNavigate={navigateRoot}
         onBack={handleBack}
         showBack={showBack}
       />
 
-      {/* Main Screen Router */}
-      <main className="flex-1 w-full max-w-7xl mx-auto">
+      {/* Main Screen Router. `pb-bottom-nav` keeps the last row of every screen
+          clear of the fixed mobile navigation. */}
+      <main className="flex-1 w-full max-w-7xl mx-auto pb-bottom-nav">
         {activeScreen === 'dashboard' && (
           <Dashboard
             onNavigate={navigateTo}
@@ -254,7 +275,7 @@ export default function App() {
             }}
             onSuccess={() => {
               setEditingMeasurement(null);
-              setActiveScreen('client_profile');
+              handleBack();
             }}
           />
         )}
@@ -296,7 +317,7 @@ export default function App() {
       {/* Mobile Bottom Navigation */}
       <BottomNav
         activeScreen={activeScreen}
-        onNavigate={navigateTo}
+        onNavigate={navigateRoot}
       />
     </div>
   );

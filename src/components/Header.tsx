@@ -15,7 +15,7 @@ export const Header: React.FC<Props> = ({
   showBack = false,
 }) => {
   return (
-    <header className="w-full sticky top-0 z-50 bg-ink border-b border-border shadow-sm transition-transform duration-200">
+    <header className="w-full sticky top-0 z-20 bg-ink border-b border-border shadow-sm transition-transform duration-200">
       <div className="flex items-center justify-between px-4 py-3 w-full max-w-7xl mx-auto">
         {showBack ? (
           <button

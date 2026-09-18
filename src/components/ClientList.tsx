@@ -38,7 +38,7 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
       const { data: measurementsData, error: measurementsError } = await supabase
         .from('measurements')
         .select('client_id, weight, measured_on, created_at')
-        .order('created_at', { ascending: true });
+        .order('measured_on', { ascending: true });
 
       if (measurementsError) throw measurementsError;
 
@@ -125,7 +125,7 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
   return (
     <div className="flex-1 w-full max-w-3xl mx-auto pb-24 flex flex-col min-h-screen font-['Inter',sans-serif]">
       {/* Search & Filter Section */}
-      <section className="px-4 py-3 sticky top-[57px] z-40 bg-ink/95 backdrop-blur-sm border-b border-border">
+      <section className="px-4 py-3 sticky top-[57px] z-10 bg-ink/95 backdrop-blur-sm border-b border-border">
         {/* Search Bar */}
         <div className="relative w-full mb-3">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -319,7 +319,7 @@ export const ClientList: React.FC<Props> = ({ onNavigate, onSelectClient }) => {
       {/* Floating Action Button */}
       <button
         onClick={() => onNavigate('add_client')}
-        className="fixed bottom-24 right-5 z-40 bg-accent text-white font-semibold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-[0_4px_14px_rgba(255,106,26,0.35)] flex items-center space-x-2 active:scale-95 transition-all hover:bg-accent-hover md:bottom-8 md:right-8"
+        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-5 z-20 bg-accent text-white font-semibold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-[0_4px_14px_rgba(255,106,26,0.35)] flex items-center space-x-2 active:scale-95 transition-all hover:bg-accent-hover md:bottom-8 md:right-8"
       >
         <span className="material-symbols-outlined text-lg">add</span>
         <span>Add Client</span>

@@ -16,6 +16,11 @@
   --color-success: #34d399;
 }
 
+/* Layering contract — keep these in sync, they are the reason modals used to
+   disappear behind the bottom navigation:
+     10  sticky in-page section headers
+     20  app header / bottom navigation / floating action buttons
+     50  modals & bottom sheets (always above chrome)  */
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -23,6 +28,40 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Safe-area helpers. Tailwind has no built-in `pb-safe`; the old class was a
+     silent no-op, which is why the nav sat under the iOS/Android home bar. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Height of the fixed mobile bottom navigation, including the home bar. */
+  .h-bottom-nav {
+    height: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* Reserve room so the last item of a screen is never hidden by the nav. */
+  .pb-bottom-nav {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+  @media (min-width: 768px) {
+    .pb-bottom-nav {
+      padding-bottom: 2rem;
+    }
+  }
+}
+
+/* Mobile browsers shrink the visual viewport when the URL bar is showing.
+   `dvh` tracks that; `vh` does not, which clipped sheet action buttons. */
+:root {
+  --sheet-max-h: 88vh;
+}
+@supports (height: 100dvh) {
+  :root {
+    --sheet-max-h: 88dvh;
   }
 }
 

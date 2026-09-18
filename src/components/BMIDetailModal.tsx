@@ -1,6 +1,6 @@
 import React from 'react';
-import { X } from 'lucide-react';
 import { bmiCategoryInfo, BMI_RANGES } from '../lib/bmi';
+import { Modal } from './ui/Modal';
 
 interface Props {
   bmi: number;
@@ -11,23 +11,17 @@ export const BMIDetailModal: React.FC<Props> = ({ bmi, onClose }) => {
   const info = bmiCategoryInfo(bmi);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" onClick={onClose}>
-      <div
-        className="bg-surface border border-border rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto no-scrollbar p-5 space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between">
+    <Modal title="BMI" onClose={onClose} size="md">
+      <div className="p-5 space-y-4">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Category</p>
-            <h2 className="text-2xl font-bold text-white">{info.category}</h2>
+            <h3 className="text-2xl font-bold text-white">{info.category}</h3>
           </div>
           <div className="text-right">
             <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">BMI</p>
             <p className="text-2xl font-bold text-accent">{bmi}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="absolute top-4 right-4 p-1.5 rounded-full bg-surface-alt hover:bg-border text-text-muted">
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         <p className="text-sm text-text-muted border-t border-border pt-3">
@@ -35,15 +29,15 @@ export const BMIDetailModal: React.FC<Props> = ({ bmi, onClose }) => {
         </p>
 
         <div>
-          <h3 className="text-sm font-semibold text-white mb-1">Analysis</h3>
+          <h4 className="text-sm font-semibold text-white mb-1">Analysis</h4>
           <p className="text-sm text-text-muted">{info.analysis}</p>
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-white mb-1">Risk</h3>
+          <h4 className="text-sm font-semibold text-white mb-1">Risk</h4>
           <p className="text-sm text-text-muted">{info.risk}</p>
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-white mb-1">Recommendation</h3>
+          <h4 className="text-sm font-semibold text-white mb-1">Recommendation</h4>
           <p className="text-sm text-text-muted">{info.recommendation}</p>
         </div>
 
@@ -68,6 +62,6 @@ export const BMIDetailModal: React.FC<Props> = ({ bmi, onClose }) => {
           This is an informational fitness-coaching estimate, not a medical diagnosis.
         </p>
       </div>
-    </div>
+    </Modal>
   );
 };

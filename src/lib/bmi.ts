@@ -59,8 +59,9 @@ export const BMI_RANGES = [
   { label: 'Obesity III', range: '> 40' },
 ];
 
+/** One decimal place everywhere, so the profile card and the detail sheet agree. */
 export function calculateBmi(weightKg: number, heightCm: number): number {
-  return parseFloat((weightKg / ((heightCm / 100) ** 2)).toFixed(2));
+  return parseFloat((weightKg / ((heightCm / 100) ** 2)).toFixed(1));
 }
 
 export function bmiCategoryInfo(bmi: number): BmiCategory {

@@ -1,12 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
-import { Sparkles, Pencil, Camera, Images, X as XIcon } from 'lucide-react';
+import {
+  Sparkles,
+  Pencil,
+  Camera,
+  Images,
+  Scale,
+  PersonStanding,
+  Ruler,
+  Percent,
+} from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, ProgressPhoto, PhotoAngle, ActiveScreen } from '../types';
 import { ClientSettingsTab } from './ClientSettingsTab';
 import { AIAnalysisModal } from './AIAnalysisModal';
 import { BodyCompositionModal } from './BodyCompositionModal';
 import { CompareMeasurementsModal } from './CompareMeasurementsModal';
+import { Modal } from './ui/Modal';
+import { resolveBodyFat } from '../lib/bodyComposition';
+import { PERIMETERS } from '../lib/perimeters';
 import type { ChartableMetric } from './MeasurementProgress';
 
 interface Props {
@@ -143,7 +155,9 @@ export const ClientProfile: React.FC<Props> = ({
         .from('measurements')
         .select('*')
         .eq('client_id', client.id)
-        .order('created_at', { ascending: true });
+        // Order by the date the measurement was taken, so back-dated entries
+        // still land in the right place and "latest" really is the latest.
+        .order('measured_on', { ascending: true });
 
       if (mErr) throw mErr;
       setMeasurements(mData || []);
@@ -222,6 +236,10 @@ export const ClientProfile: React.FC<Props> = ({
     : bmi < 30 ? 'Overweight'
     : 'Obese';
 
+  // Body fat: the trainer's entered value, otherwise the US Navy estimate from
+  // the recorded girths. Never a placeholder.
+  const latestFat = resolveBodyFat(client, latestMeasurement);
+
   const startedDateFormatted = client.created_at
     ? new Date(client.created_at).toLocaleDateString('en-US', {
         month: 'short',
@@ -229,6 +247,52 @@ export const ClientProfile: React.FC<Props> = ({
         year: 'numeric',
       })
     : '—';
+
+  /** The six progress destinations, each labelled with its real current value. */
+  const progressCards = useMemo(() => {
+    const perimetersRecorded = latestMeasurement
+      ? PERIMETERS.filter((p) => latestMeasurement[p.dbColumn] != null).length
+      : 0;
+
+    return [
+      {
+        label: 'AI-Powered Analysis',
+        Icon: Sparkles,
+        value: measurements.length > 0 ? `${measurements.length} measurements to read` : 'Needs a measurement',
+        onClick: () => setShowAiAnalysis(true),
+      },
+      {
+        label: 'Weight',
+        Icon: Scale,
+        value: latestMeasurement?.weight != null ? `${latestMeasurement.weight} kg now` : 'Not recorded',
+        onClick: () => onViewProgress('weight'),
+      },
+      {
+        label: 'Body Composition',
+        Icon: PersonStanding,
+        value: bmi != null ? `BMI ${bmi}` : 'Needs weight & height',
+        onClick: () => setShowBodyComposition(true),
+      },
+      {
+        label: 'Photos',
+        Icon: Camera,
+        value: photos.length > 0 ? `${photos.length} photo${photos.length === 1 ? '' : 's'}` : 'None yet',
+        onClick: () => setActiveTab('photos'),
+      },
+      {
+        label: 'Perimeters',
+        Icon: Ruler,
+        value: perimetersRecorded > 0 ? `${perimetersRecorded} of 11 recorded` : 'None recorded',
+        onClick: () => onViewProgress('chest'),
+      },
+      {
+        label: 'Fat',
+        Icon: Percent,
+        value: latestFat ? `${latestFat.percent}% now` : 'Not available',
+        onClick: () => onViewProgress('body_fat_percent'),
+      },
+    ];
+  }, [measurements, latestMeasurement, bmi, photos.length, latestFat, onViewProgress]);
 
   // Real, data-driven weight trend chart (replaces the previous hardcoded polyline)
   const weightChartPoints = useMemo(() => {
@@ -589,7 +653,10 @@ export const ClientProfile: React.FC<Props> = ({
                 </div>
                 <div className="bg-surface-alt rounded-lg p-2.5 text-center">
                   <span className="block text-[10px] uppercase text-text-muted mb-1">Fat</span>
-                  <span className="text-sm font-bold text-white">{latestMeasurement.body_fat_percent != null ? `${latestMeasurement.body_fat_percent}%` : '—'}</span>
+                  <span className="text-sm font-bold text-white">{latestFat ? `${latestFat.percent}%` : '—'}</span>
+                  {latestFat?.source === 'us_navy' && (
+                    <span className="block text-[10px] text-text-muted">est.</span>
+                  )}
                 </div>
                 <div className="bg-surface-alt rounded-lg p-2.5 text-center">
                   <span className="block text-[10px] uppercase text-text-muted mb-1">BMI</span>
@@ -651,52 +718,22 @@ export const ClientProfile: React.FC<Props> = ({
             )}
           </div>
 
-          {/* My Progress */}
+          {/* My Progress — each card states the current value so the trainer
+              knows what it holds before tapping it. */}
           <div>
             <h3 className="text-xl font-semibold text-white mb-3">My Progress</h3>
             <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setShowAiAnalysis(true)}
-                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
-              >
-                <Sparkles className="w-5 h-5 text-accent" />
-                <span className="text-sm font-semibold text-white">AI-Powered Analysis</span>
-              </button>
-              <button
-                onClick={() => onViewProgress('weight')}
-                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
-              >
-                <span className="material-symbols-outlined text-accent text-xl">monitor_weight</span>
-                <span className="text-sm font-semibold text-white">Weight</span>
-              </button>
-              <button
-                onClick={() => setShowBodyComposition(true)}
-                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
-              >
-                <span className="material-symbols-outlined text-accent text-xl">accessibility_new</span>
-                <span className="text-sm font-semibold text-white">Body Composition</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('photos')}
-                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
-              >
-                <span className="material-symbols-outlined text-accent text-xl">photo_camera</span>
-                <span className="text-sm font-semibold text-white">Photos</span>
-              </button>
-              <button
-                onClick={() => onViewProgress('chest')}
-                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
-              >
-                <span className="material-symbols-outlined text-accent text-xl">straighten</span>
-                <span className="text-sm font-semibold text-white">Perimeters</span>
-              </button>
-              <button
-                onClick={() => onViewProgress('body_fat_percent')}
-                className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center min-h-[92px]"
-              >
-                <span className="material-symbols-outlined text-accent text-xl">bloodtype</span>
-                <span className="text-sm font-semibold text-white">Fat</span>
-              </button>
+              {progressCards.map((card) => (
+                <button
+                  key={card.label}
+                  onClick={card.onClick}
+                  className="bg-surface border border-border hover:border-accent/50 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 text-center min-h-[104px] transition-colors"
+                >
+                  <card.Icon className="w-5 h-5 text-accent" />
+                  <span className="text-sm font-semibold text-white leading-tight">{card.label}</span>
+                  <span className="text-[11px] text-text-muted leading-tight">{card.value}</span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -1122,62 +1159,67 @@ export const ClientProfile: React.FC<Props> = ({
 
       {/* PHOTO SOURCE CHOICE (Camera / Gallery) */}
       {sourceChoiceAngle && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setSourceChoiceAngle(null)}
+        <Modal
+          title={`Add ${ANGLE_LABELS[sourceChoiceAngle]} Photo`}
+          onClose={() => setSourceChoiceAngle(null)}
+          size="sm"
         >
-          <div
-            className="bg-surface border border-border rounded-t-2xl sm:rounded-2xl w-full sm:max-w-xs p-5 space-y-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-white">Add {ANGLE_LABELS[sourceChoiceAngle]} Photo</h3>
-              <button onClick={() => setSourceChoiceAngle(null)} aria-label="Close" className="p-1.5 rounded-full bg-surface-alt hover:bg-border text-text-muted">
-                <XIcon className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="p-5 space-y-3">
             <button
               onClick={chooseCamera}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-surface-alt hover:bg-border rounded-lg text-white"
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-surface-alt hover:bg-border rounded-lg text-white"
             >
               <Camera className="w-5 h-5 text-accent" />
               <span className="font-medium">Camera</span>
             </button>
             <button
               onClick={chooseGallery}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-surface-alt hover:bg-border rounded-lg text-white"
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-surface-alt hover:bg-border rounded-lg text-white"
             >
               <Images className="w-5 h-5 text-accent" />
               <span className="font-medium">Gallery</span>
             </button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* UPLOAD PHOTO MODAL */}
       {selectedFile && pendingAngle && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface rounded-xl max-w-md w-full p-6 space-y-4 border border-border max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center pb-2 border-b border-border">
-              <h3 className="text-lg font-bold text-accent">Upload {ANGLE_LABELS[pendingAngle]} Photo</h3>
+        <Modal
+          title={`Upload ${ANGLE_LABELS[pendingAngle]} Photo`}
+          onClose={cancelUpload}
+          size="md"
+          dismissOnBackdrop={false}
+          footer={
+            <div className="flex gap-2">
               <button
+                type="button"
                 onClick={cancelUpload}
-                className="text-text-muted hover:text-white"
+                className="flex-1 border border-border text-text-muted py-3 rounded-lg font-semibold"
               >
-                <span className="material-symbols-outlined">close</span>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="photo-upload-form"
+                disabled={uploading}
+                className="flex-1 bg-accent hover:bg-accent-hover text-white font-semibold py-3 rounded-lg btn-press disabled:opacity-60"
+              >
+                {uploading ? 'Uploading…' : 'Upload Photo'}
               </button>
             </div>
-
+          }
+        >
+          <div className="p-5 space-y-4">
             {uploadError && (
               <div className="p-3 bg-danger-bg text-danger text-xs rounded border border-danger/30">
                 {uploadError}
               </div>
             )}
 
-            <form onSubmit={handlePhotoUpload} className="space-y-4">
-              <div className="rounded-lg overflow-hidden border border-border bg-surface-alt aspect-video flex items-center justify-center">
+            <form id="photo-upload-form" onSubmit={handlePhotoUpload} className="space-y-4">
+              {/* Never crop a progress photo — contain, so the full frame is visible. */}
+              <div className="rounded-lg overflow-hidden border border-border bg-ink aspect-[3/4] max-h-[45vh] flex items-center justify-center">
                 <img
                   src={URL.createObjectURL(selectedFile)}
                   alt="Selected preview"
@@ -1187,7 +1229,7 @@ export const ClientProfile: React.FC<Props> = ({
 
               <div>
                 <label htmlFor="taken-at" className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
-                  Date & Time Taken
+                  Date &amp; Time Taken
                 </label>
                 <input
                   id="taken-at"
@@ -1198,26 +1240,9 @@ export const ClientProfile: React.FC<Props> = ({
                   required
                 />
               </div>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={cancelUpload}
-                  className="px-4 py-2 text-xs font-semibold uppercase text-text-muted hover:bg-surface-alt rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  className="px-6 py-2 bg-accent text-white text-xs font-semibold uppercase tracking-wider rounded-lg btn-press"
-                >
-                  {uploading ? 'Uploading...' : 'Upload Photo'}
-                </button>
-              </div>
             </form>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

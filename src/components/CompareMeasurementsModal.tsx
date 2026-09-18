@@ -1,7 +1,7 @@
 import React from 'react';
-import { X } from 'lucide-react';
 import { Measurement } from '../types';
 import { PERIMETERS } from '../lib/perimeters';
+import { Modal } from './ui/Modal';
 
 interface Props {
   a: Measurement;
@@ -24,19 +24,8 @@ export const CompareMeasurementsModal: React.FC<Props> = ({ a, b, onClose }) => 
   const [earlier, later] = new Date(a.measured_on) <= new Date(b.measured_on) ? [a, b] : [b, a];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" onClick={onClose}>
-      <div
-        className="bg-surface border border-border rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="sticky top-0 bg-surface border-b border-border px-5 py-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Compare Measurements</h2>
-          <button onClick={onClose} aria-label="Close" className="p-2 rounded-full bg-surface-alt hover:bg-border text-text-muted">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="p-5">
+    <Modal title="Compare Measurements" onClose={onClose} size="lg">
+      <div className="p-5">
           <div className="grid grid-cols-3 gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted mb-2 px-1">
             <span></span>
             <span className="text-center">{fmtDate(earlier)}</span>
@@ -64,9 +53,8 @@ export const CompareMeasurementsModal: React.FC<Props> = ({ a, b, onClose }) => 
                 </div>
               );
             })}
-          </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

@@ -4,6 +4,7 @@ import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, CustomMeasure, BiologicalSex, BodyCompositionMethod, ActiveScreen } from '../types';
 import { PERIMETERS, PerimeterId } from '../lib/perimeters';
 import { BODY_COMPOSITION_METHODS } from '../lib/bodyComposition';
+import { Modal } from './ui/Modal';
 
 interface Props {
   client: Client;
@@ -76,7 +77,7 @@ export const ClientSettingsTab: React.FC<Props> = ({
         .from('custom_measures')
         .select('*')
         .eq('trainer_id', user.id)
-        .order('created_at', { ascending: true });
+        .order('measured_on', { ascending: true });
       if (data) setCustomMeasures(data);
     };
     fetchCustomMeasures();
@@ -495,30 +496,35 @@ export const ClientSettingsTab: React.FC<Props> = ({
 
       {/* Delete confirmation */}
       {confirmingDelete && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-surface border border-border rounded-xl max-w-sm w-full p-5 space-y-3">
-            <h3 className="text-lg font-semibold text-white">Delete {client.name}?</h3>
-            <p className="text-sm text-text-muted">
-              This permanently deletes this client along with their measurements and progress photos. This cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2 pt-2">
+        <Modal
+          title={`Delete ${client.name}?`}
+          onClose={() => setConfirmingDelete(false)}
+          size="sm"
+          dismissOnBackdrop={false}
+          footer={
+            <div className="flex gap-2">
               <button
                 onClick={() => setConfirmingDelete(false)}
                 disabled={deleting}
-                className="px-4 py-2 text-xs font-semibold uppercase text-text-muted hover:bg-surface-alt rounded-lg"
+                className="flex-1 border border-border text-text-muted py-3 rounded-lg font-semibold disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteClient}
                 disabled={deleting}
-                className="px-4 py-2 bg-danger text-white text-xs font-semibold uppercase tracking-wider rounded-lg disabled:opacity-50"
+                className="flex-1 bg-danger text-white font-semibold py-3 rounded-lg disabled:opacity-50"
               >
-                {deleting ? 'Deleting...' : 'Delete'}
+                {deleting ? 'Deleting…' : 'Delete'}
               </button>
             </div>
-          </div>
-        </div>
+          }
+        >
+          <p className="p-5 text-sm text-text-muted">
+            This permanently deletes this client along with their measurements and progress photos. This
+            cannot be undone.
+          </p>
+        </Modal>
       )}
     </section>
   );

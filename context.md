@@ -503,3 +503,122 @@ Resolved by earlier upgrades (previously listed here, no longer applicable): the
 13. Body-composition **calculation** (US Navy, Jackson-Pollock formulas, BIA) is explicitly deferred — do not implement a formula or display a computed body-fat number unless specifically asked. `clients.body_composition_method` only stores the trainer's selected method.
 14. The 11 canonical perimeters live in `src/lib/perimeters.ts` (id/label/dbColumn) — reuse this config for any new perimeter-related UI rather than hardcoding the list again. Custom measures are trainer-scoped (`custom_measures.trainer_id`), not per-client.
 15. Any unit-toggle control (cm/in, metric/imperial) that sits next to already-entered numeric values must convert those values when the toggle changes (see `AddMeasurementModal.handlePerimeterUnitChange` and the wizard's `handleUnitChange`) — a label-only swap silently reinterprets the trainer's data.
+
+---
+
+## 21. UI/UX + Production Polish Pass (Sep 2026)
+
+### 21.1 Layering contract (why modals used to vanish)
+
+`BottomNav` was `z-50` and rendered *after* every `z-50` modal in the DOM, so it
+always painted on top — the Camera/Gallery sheet, the AI wizard's action row and
+the Body Composition sheet were all unreachable on a phone. The `pb-safe` class
+used by the nav did not exist in Tailwind v4 either, so it was a silent no-op.
+
+The contract is now fixed and documented at the top of `src/index.css`:
+
+| z-index | What |
+|---|---|
+| 10 | Sticky in-page section headers (e.g. the client-list search bar) |
+| 20 | App header, bottom navigation, floating action buttons |
+| 60 | Modals and bottom sheets — always above chrome |
+
+Utilities added in `src/index.css`: `.pb-safe`, `.pt-safe`, `.h-bottom-nav`,
+`.pb-bottom-nav`, and the `--sheet-max-h` variable (88dvh with a vh fallback).
+`<main>` in `App.tsx` carries `pb-bottom-nav` so no screen's last row hides
+behind the nav.
+
+### 21.2 One modal standard
+
+`src/components/ui/Modal.tsx` is the single sheet/modal implementation. Mobile →
+bottom sheet, desktop → centred card, capped at `--sheet-max-h`, header pinned,
+body scrolls internally, optional sticky `footer` for actions with safe-area
+padding. It also handles Escape, body-scroll lock and Back-to-close.
+
+**Do not hand-roll another `fixed inset-0` dialog.** Every modal now uses it.
+
+### 21.3 Back navigation
+
+`src/lib/backStack.ts` centralises Android/browser Back. It keeps one logical
+stack of handlers and holds exactly ONE extra history entry ("the trap") while
+that stack is non-empty. A Back press consumes the trap, runs the top handler,
+then re-arms only if internal history remains — so the user is never trapped in
+the app, and Back never exits while a sheet is open or a screen is nested.
+
+`App.tsx` navigation was reworked to match: `screenHistory` is the single source
+of truth (`activeScreen` is its last entry). `navigateTo` drills down (and pops
+back if the target is already in the stack, so Cancel returns instead of
+stacking); `navigateRoot` is used by the header/bottom-nav tabs and resets the
+stack.
+
+### 21.4 Body composition is real now — the locks were a copied paywall
+
+The Muscle / FFMI / Nor. FFMI locks were StartFit's premium crowns copied into
+Goodlife as `Lock` icons. There was no Goodlife permission model behind them.
+They are gone, replaced with real arithmetic in `src/lib/bodyComposition.ts`:
+
+- `usNavyBodyFat()` — Hodgdon & Beckett circumference method. For men the Navy
+  protocol measures at the navel, which this app records as **Abdomen**; it
+  falls back to Waist when abdomen was not taken.
+- `resolveBodyFat()` — the trainer's entered `body_fat_percent` always wins;
+  only when it is absent do we fall back to the US Navy estimate, and the UI
+  labels it as an estimate. Returns `null` rather than a placeholder.
+- `missingForBodyFat()` — names exactly what still needs recording.
+- `compositionBreakdown()` — fat mass, fat-free mass, FFMI, normalized FFMI
+  (Kouri height-normalisation to 1.80 m). Exact once weight, height and a
+  body-fat % exist.
+
+"Muscle" is labelled **Muscle (Fat-Free Mass)** because that is what the number
+is — everything that is not fat. This matches the reference app exactly (70 kg
+at 17.01 % → 58.1 kg). Skeletal-muscle mass specifically still needs
+bioimpedance and is not claimed.
+
+**This supersedes old rule 13.** Calculation is no longer deferred. The rule that
+still stands: never display a fabricated number — show what is missing instead.
+
+### 21.5 Measurements are ordered by `measured_on`, never `created_at`
+
+Every list and chart sorted by row insert time, so a back-dated measurement
+landed in the wrong place — the profile showed the *first* measurement as
+"Last Measurement" and inverted the weight-change delta. Fixed in
+`ClientProfile`, `ClientList`, `Dashboard`, `ClientSettingsTab`,
+`AddMeasurementModal`, `MeasurementProgress` and `ShareReportModal`.
+
+### 21.6 AI report
+
+Architecture is REAL DB DATA → SERVER-SIDE ANALYSIS → VERIFIED FACTS → GEMINI →
+STRUCTURED JSON → UI. The model writes **prose only**; every number the trainer
+sees (the "Progress at a glance" tiles, goal gap, period, measurement count) is
+computed in the Edge Function and attached to the report *after* generation.
+That is what makes the Marathi + English mode safe: a translation cannot alter a
+value because the model never emits one.
+
+Report shape (see `AiReport` in `types.ts`): glance tiles, summary,
+whatsGoingWell, focusNext, goalProgress + goalStatement, trainerInsight,
+nextCheckIn, clientMessage ("Tell the client", copyable), dataQuality,
+disclaimer.
+
+The function retries transient Gemini failures (429/5xx) with backoff across a
+model chain and returns a distinct "busy, try again" message (503) versus a real
+failure (502). `GEMINI_API_KEY` stays server-side and is never logged or
+returned.
+
+### 21.7 Share report
+
+Fabricated fallbacks (`-4.0` kg, `-3.0` %, `Oct 1, 2023`) removed — it now shows
+"Not recorded" / "Only one measurement on record" instead of inventing data. The
+WhatsApp message is a compact scannable block (KEY CHANGES / MEASUREMENTS /
+PROGRESS HIGHLIGHT / NEXT FOCUS) covering all 11 perimeters that actually
+changed, with exact recorded values. The highlight line is derived from the
+numbers, not written by an AI.
+
+### 21.8 Rules added
+
+16. Modals/sheets: use `src/components/ui/Modal.tsx`. Never hand-roll a
+    `fixed inset-0` dialog, and never give app chrome a z-index at or above 60.
+17. Order measurements by `measured_on`, never `created_at`.
+18. Gemini writes prose; the server computes numbers. Never let a model emit a
+    value the UI renders as fact, and never add a client-visible number that
+    isn't derived from a stored measurement.
+19. Never render a lock/paywall affordance — Goodlife has no premium tier. If a
+    metric can't be computed, say what data is missing.

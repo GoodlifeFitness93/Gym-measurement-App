@@ -64,7 +64,7 @@ export const Dashboard: React.FC<Props> = ({
       const { data: measurementsData, error: measurementsError } = await supabase
         .from('measurements')
         .select('client_id, measured_on, weight, created_at')
-        .order('created_at', { ascending: false });
+        .order('measured_on', { ascending: false });
 
       if (measurementsError) throw measurementsError;
 
@@ -427,7 +427,7 @@ export const Dashboard: React.FC<Props> = ({
       {/* Floating Action Button */}
       <button
         onClick={() => onNavigate('add_client')}
-        className="fixed bottom-24 right-5 z-40 bg-accent text-white font-semibold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-[0_4px_14px_rgba(255,106,26,0.35)] flex items-center space-x-2 active:scale-95 transition-all hover:bg-accent-hover md:bottom-8 md:right-8"
+        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-5 z-20 bg-accent text-white font-semibold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-[0_4px_14px_rgba(255,106,26,0.35)] flex items-center space-x-2 active:scale-95 transition-all hover:bg-accent-hover md:bottom-8 md:right-8"
       >
         <span className="material-symbols-outlined text-lg">add</span>
         <span>Add Client</span>

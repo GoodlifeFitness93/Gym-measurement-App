@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { Client, Measurement, ActiveScreen } from '../types';
+import { resolveBodyFat } from '../lib/bodyComposition';
 
 export type ChartableMetric =
   | 'weight'
@@ -71,10 +72,20 @@ export const MeasurementProgress: React.FC<Props> = ({ client, onNavigate, initi
         .from('measurements')
         .select('*')
         .eq('client_id', client.id)
-        .order('created_at', { ascending: true });
+        // Sort by the date of the measurement, not the row's insert time, so a
+        // back-dated entry lands in the right place on the chart.
+        .order('measured_on', { ascending: true });
 
       if (error) throw error;
-      setMeasurements(data || []);
+
+      // Fill in body fat from the US Navy girth method where the trainer did
+      // not enter one, so the Fat view works from the data actually recorded.
+      const resolved = (data || []).map((m) => {
+        if (m.body_fat_percent != null) return m;
+        const est = resolveBodyFat(client, m);
+        return est ? { ...m, body_fat_percent: est.percent } : m;
+      });
+      setMeasurements(resolved);
     } catch (err) {
       console.error('Error loading measurement progress:', err);
     } finally {
