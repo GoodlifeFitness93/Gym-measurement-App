@@ -1,36 +1,49 @@
-import type { AiReport, AiGlanceTile, AiGoalProgress, AiReportLanguage } from '../types';
+import type {
+  AiReport,
+  AiMetric,
+  AiGoalProgress,
+  AiReportLanguage,
+  AiTrainerAttention,
+  AiDataConfidence,
+} from '../types';
 
 /**
  * The ONE place an Edge Function response becomes an AiReport.
  *
- * A provider can return a short array, a null section, or a field the schema
- * said was required. The UI must never crash on that, so every field is
+ * A provider can return a short array, a null section, or omit a field the
+ * schema said was required. The UI must never crash on that, so every field is
  * coerced here and the renderer can then read it without guards.
  *
- * (A missing section previously reached the renderer as `undefined`, and
+ * (A missing section once reached the renderer as `undefined`, and
  * `report.whatsGoingWell.length` unmounted the whole React tree — a blank
  * screen. Normalising centrally is what prevents that class of bug.)
  */
 
 const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
 
-const strArray = (v: unknown): string[] =>
-  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [];
+const strArray = (v: unknown, max = 8): string[] =>
+  Array.isArray(v)
+    ? v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).slice(0, max)
+    : [];
 
-function glanceTiles(v: unknown): AiGlanceTile[] {
+const DIRECTIONS: AiMetric['direction'][] = ['increase', 'decrease', 'flat', 'none'];
+
+function metrics(v: unknown): AiMetric[] {
   if (!Array.isArray(v)) return [];
   return v
-    .filter((t): t is Record<string, unknown> => !!t && typeof t === 'object')
-    .map((t) => ({
-      label: str(t.label) || '—',
-      unit: str(t.unit),
-      from: typeof t.from === 'number' ? t.from : null,
-      to: typeof t.to === 'number' ? t.to : 0,
-      change: typeof t.change === 'number' ? t.change : null,
-      changePct: typeof t.changePct === 'number' ? t.changePct : null,
-      direction: (t.direction as AiGlanceTile['direction']) ?? 'none',
-      good: typeof t.good === 'boolean' ? t.good : null,
-      note: typeof t.note === 'string' ? t.note : null,
+    .filter((m): m is Record<string, unknown> => !!m && typeof m === 'object')
+    .filter((m) => typeof m.value === 'number' && isFinite(m.value as number))
+    .map((m) => ({
+      label: str(m.label) || '—',
+      value: m.value as number,
+      unit: str(m.unit),
+      change: typeof m.change === 'number' && isFinite(m.change) ? m.change : null,
+      direction: DIRECTIONS.includes(m.direction as AiMetric['direction'])
+        ? (m.direction as AiMetric['direction'])
+        : 'none',
+      good: typeof m.good === 'boolean' ? m.good : null,
+      note: typeof m.note === 'string' && m.note.trim() ? m.note.trim() : null,
+      source: typeof m.source === 'string' && m.source.trim() ? m.source.trim() : null,
     }));
 }
 
@@ -46,6 +59,46 @@ function goalNumbers(v: unknown): AiGoalProgress | null {
   };
 }
 
+const SEVERITIES: AiTrainerAttention['severity'][] = ['info', 'warning', 'critical'];
+
+function attention(v: unknown): AiTrainerAttention {
+  const a = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  return {
+    title: str(a.title),
+    summary: str(a.summary),
+    severity: SEVERITIES.includes(a.severity as AiTrainerAttention['severity'])
+      ? (a.severity as AiTrainerAttention['severity'])
+      : 'info',
+  };
+}
+
+const LEVELS: AiDataConfidence['level'][] = ['high', 'moderate', 'limited'];
+
+/**
+ * The level is computed server-side; the model only writes the reason. Models
+ * still sometimes open with "Confidence is moderate because ...", which can
+ * contradict the computed level shown beside it. Strip that opener so only the
+ * explanation remains.
+ */
+function cleanReason(raw: string): string {
+  const cleaned = raw
+    .replace(/^(data\s+)?confidence\s+(is|level\s+is)\s+\w+[,;]?\s*(because|as|since|due to|given)?\s*/i, '')
+    .trim();
+  if (!cleaned) return raw;
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+function confidence(v: unknown): AiDataConfidence {
+  const c = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  const reason = str(c.reason);
+  return {
+    level: LEVELS.includes(c.level as AiDataConfidence['level'])
+      ? (c.level as AiDataConfidence['level'])
+      : 'limited',
+    reason: reason ? cleanReason(reason) : '',
+  };
+}
+
 const LANGUAGES: AiReportLanguage[] = ['en', 'mr', 'mr_en'];
 
 export function normalizeAiReport(raw: unknown): AiReport {
@@ -54,19 +107,14 @@ export function normalizeAiReport(raw: unknown): AiReport {
   const lang = LANGUAGES.includes(r.language as AiReportLanguage) ? (r.language as AiReportLanguage) : 'en';
 
   return {
-    executive_summary: str(r.executive_summary),
-    progress_highlights: strArray(r.progress_highlights),
-    what_is_going_well: strArray(r.what_is_going_well),
-    areas_to_watch: strArray(r.areas_to_watch),
-    goal_progress: str(r.goal_progress),
-    coaching_insights: strArray(r.coaching_insights),
-    recommended_next_actions: strArray(r.recommended_next_actions),
-    next_measurement_focus: strArray(r.next_measurement_focus),
-    data_quality: str(r.data_quality),
+    trainer_attention: attention(r.trainer_attention),
+    what_we_know: strArray(r.what_we_know, 4),
+    what_we_dont_know: strArray(r.what_we_dont_know, 3),
     trainer_insight: str(r.trainer_insight),
-    disclaimer: str(r.disclaimer),
+    next_check_in: strArray(r.next_check_in, 4),
+    data_confidence: confidence(r.data_confidence),
 
-    glance: glanceTiles(r.glance),
+    current_state: metrics(r.current_state),
     goalNumbers: goalNumbers(r.goalNumbers),
     language: lang,
     periodLabel: str(r.periodLabel),
@@ -86,13 +134,12 @@ export function normalizeAiReport(raw: unknown): AiReport {
   };
 }
 
-/** A report with no prose at all means the provider gave us nothing usable. */
+/** No prose at all means the provider gave us nothing usable. */
 export function isReportEmpty(r: AiReport): boolean {
   return (
-    !r.executive_summary &&
     !r.trainer_insight &&
-    r.progress_highlights.length === 0 &&
-    r.what_is_going_well.length === 0 &&
-    r.coaching_insights.length === 0
+    !r.trainer_attention.summary &&
+    r.what_we_know.length === 0 &&
+    r.next_check_in.length === 0
   );
 }

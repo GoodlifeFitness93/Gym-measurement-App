@@ -18,7 +18,10 @@ const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 // Kept for backwards compatibility with the previously deployed function.
 const GEMINI_MODEL_OVERRIDE = Deno.env.get("GEMINI_MODEL");
 
-const REPORT_VERSION = "v5";
+// Bumped to v6 with the trainer-attention report shape. The version is part of
+// the cache fingerprint, so old v5 rows (old field names) can never be served
+// to the new UI.
+const REPORT_VERSION = "v6";
 
 interface ProviderEntry {
   provider: "groq" | "openrouter" | "gemini";
@@ -122,34 +125,35 @@ const PERIMETER_FIELDS: { key: string; label: string }[] = [
 
 const STRING_ARRAY = { type: "array", items: { type: "string" } };
 
+// The model writes prose only. Current-state numbers and the confidence LEVEL
+// are computed server-side and attached afterwards.
 const REPORT_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
-    executive_summary: { type: "string" },
-    progress_highlights: STRING_ARRAY,
-    what_is_going_well: STRING_ARRAY,
-    areas_to_watch: STRING_ARRAY,
-    goal_progress: { type: "string" },
-    coaching_insights: STRING_ARRAY,
-    recommended_next_actions: STRING_ARRAY,
-    next_measurement_focus: STRING_ARRAY,
-    data_quality: { type: "string" },
+    trainer_attention: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        summary: { type: "string" },
+        severity: { type: "string", enum: ["info", "warning", "critical"] },
+      },
+      required: ["title", "summary", "severity"],
+    },
+    what_we_know: STRING_ARRAY,
+    what_we_dont_know: STRING_ARRAY,
     trainer_insight: { type: "string" },
-    disclaimer: { type: "string" },
+    next_check_in: STRING_ARRAY,
+    data_confidence_reason: { type: "string" },
   },
   required: [
-    "executive_summary",
-    "progress_highlights",
-    "what_is_going_well",
-    "areas_to_watch",
-    "goal_progress",
-    "coaching_insights",
-    "recommended_next_actions",
-    "next_measurement_focus",
-    "data_quality",
+    "trainer_attention",
+    "what_we_know",
+    "what_we_dont_know",
     "trainer_insight",
-    "disclaimer",
+    "next_check_in",
+    "data_confidence_reason",
   ],
 };
 
@@ -159,33 +163,28 @@ const REPORT_SCHEMA = {
 const GEMINI_SCHEMA: Record<string, unknown> = { ...REPORT_SCHEMA };
 delete GEMINI_SCHEMA.additionalProperties;
 
-const STRING_FIELDS = [
-  "executive_summary",
-  "goal_progress",
-  "data_quality",
-  "trainer_insight",
-  "disclaimer",
-] as const;
+const STRING_FIELDS = ["trainer_insight", "data_confidence_reason"] as const;
+const ARRAY_FIELDS = ["what_we_know", "what_we_dont_know", "next_check_in"] as const;
+const SEVERITIES = ["info", "warning", "critical"];
 
-const ARRAY_FIELDS = [
-  "progress_highlights",
-  "what_is_going_well",
-  "areas_to_watch",
-  "coaching_insights",
-  "recommended_next_actions",
-  "next_measurement_focus",
-] as const;
-
-/** Never trust raw model output — every response is checked before it is saved. */
+/** Never trust raw model output - every response is checked before it is saved. */
 function validateReport(r: unknown): r is Record<string, unknown> {
   if (!r || typeof r !== "object") return false;
   const o = r as Record<string, unknown>;
+
   for (const f of STRING_FIELDS) {
     if (typeof o[f] !== "string" || (o[f] as string).trim().length === 0) return false;
   }
   for (const f of ARRAY_FIELDS) {
     if (!Array.isArray(o[f]) || (o[f] as unknown[]).some((x) => typeof x !== "string")) return false;
   }
+
+  const ta = o.trainer_attention as Record<string, unknown> | undefined;
+  if (!ta || typeof ta !== "object") return false;
+  if (typeof ta.title !== "string" || ta.title.trim().length === 0) return false;
+  if (typeof ta.summary !== "string" || ta.summary.trim().length === 0) return false;
+  if (typeof ta.severity !== "string" || !SEVERITIES.includes(ta.severity)) return false;
+
   return true;
 }
 
@@ -313,36 +312,6 @@ function ageFrom(dob: string | null): number | null {
   const m = now.getUTCMonth() - d.getUTCMonth();
   if (m < 0 || (m === 0 && now.getUTCDate() < d.getUTCDate())) age--;
   return age >= 0 && age < 120 ? age : null;
-}
-
-/** "Progress at a glance" tile, built from facts so the UI never parses prose. */
-function glanceTile(fact: Fact | null, lowerIsBetter: boolean | null) {
-  if (!fact) return null;
-  if (fact.change == null) {
-    return {
-      label: fact.label,
-      unit: fact.unit,
-      from: null,
-      to: fact.latest,
-      change: null,
-      changePct: null,
-      direction: "none",
-      good: null,
-      note: "Only one measurement — no change yet",
-    };
-  }
-  const good = lowerIsBetter === null || fact.change === 0 ? null : lowerIsBetter ? fact.change < 0 : fact.change > 0;
-  return {
-    label: fact.label,
-    unit: fact.unit,
-    from: fact.start,
-    to: fact.latest,
-    change: fact.change,
-    changePct: fact.changePct ?? null,
-    direction: fact.change > 0 ? "increase" : fact.change < 0 ? "decrease" : "no change",
-    good,
-    note: null,
-  };
 }
 
 async function sha256Hex(s: string): Promise<string> {
@@ -612,6 +581,24 @@ Deno.serve(async (req: Request) => {
   const recordedPerimeters = new Set(perimeterFacts.map((f) => f.label));
   const missingPerimeters = PERIMETER_FIELDS.map((p) => p.label).filter((l) => !recordedPerimeters.has(l));
 
+  // Data-quality signal: several perimeters sharing one identical value is a
+  // classic tape/landmark/unit/data-entry artefact. Detect it here and let the
+  // model describe it - never let the model decide the numbers.
+  const latestByLabel = new Map<string, number>();
+  for (const f of perimeterFacts) latestByLabel.set(f.label, f.latest);
+  const valueGroups = new Map<number, string[]>();
+  for (const [label, v] of latestByLabel) valueGroups.set(v, [...(valueGroups.get(v) ?? []), label]);
+  let repeatedPerimeterValue: { value: number; count: number; perimeters: string[] } | null = null;
+  for (const [v, labels] of valueGroups) {
+    if (labels.length >= 3 && (!repeatedPerimeterValue || labels.length > repeatedPerimeterValue.count)) {
+      repeatedPerimeterValue = { value: v, count: labels.length, perimeters: labels };
+    }
+  }
+
+  const missingProfile: string[] = [];
+  if (!heightCm) missingProfile.push("height");
+  if (!sex) missingProfile.push("biological sex");
+
   let bmiFact: Fact | null = null;
   if (heightCm) {
     const h = heightCm / 100;
@@ -676,16 +663,16 @@ Deno.serve(async (req: Request) => {
     // subtract 18 from 19.1 produced "0.9" in testing.
     goalProgress,
     dataQuality: {
-      sessions,
+      measurementSessions: sessions,
       trendCapability,
       bodyFatSource,
       bodyFatMethod,
       missingPerimeters,
-      heightRecorded: heightCm != null,
-      biologicalSexRecorded: sex != null,
-      measurementCadence: avgGapDays == null
-        ? "not enough sessions to judge cadence"
-        : `roughly every ${avgGapDays} days`,
+      missingProfile,
+      repeatedPerimeterValue,
+      // Only meaningful with 2+ sessions; omitted entirely otherwise so the
+      // model can never surface "cadence 0 days" as if it meant something.
+      ...(avgGapDays != null ? { measurementCadenceDays: avgGapDays } : {}),
     },
   };
 
@@ -728,17 +715,83 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // Server-computed presentation values, attached after generation so no model
-  // (or translation) can alter a number the trainer reads.
-  const keyPerimeter = perimeterFacts
-    .filter((p) => p.change != null)
-    .sort((a, b) => Math.abs(b.change!) - Math.abs(a.change!))[0] ?? perimeterFacts[0] ?? null;
+  /* ---- Server-computed presentation values. Attached after generation so no
+     model (or translation) can alter a number the trainer reads. ---- */
 
-  const glance = [
-    glanceTile(weightFact, goal === "lose_fat" ? true : null),
-    glanceTile(fatFact, true),
-    glanceTile(keyPerimeter, goal === "lose_fat" ? true : null),
-  ].filter((t) => t !== null);
+  interface Metric {
+    label: string;
+    value: number;
+    unit: string;
+    change: number | null;
+    direction: "increase" | "decrease" | "flat" | "none";
+    good: boolean | null;
+    note: string | null;
+    source: string | null;
+  }
+
+  const metric = (
+    fact: Fact | null,
+    lowerIsBetter: boolean | null,
+    source: string | null = null,
+  ): Metric | null => {
+    if (!fact) return null;
+    const hasChange = fact.change != null;
+    return {
+      label: fact.label,
+      value: fact.latest,
+      unit: fact.unit,
+      change: hasChange ? fact.change! : null,
+      direction: !hasChange ? "none" : fact.change! > 0 ? "increase" : fact.change! < 0 ? "decrease" : "flat",
+      good: !hasChange || lowerIsBetter === null || fact.change === 0
+        ? null
+        : lowerIsBetter
+        ? fact.change! < 0
+        : fact.change! > 0,
+      note: hasChange ? null : "1 measurement session - trend unavailable",
+      source,
+    };
+  };
+
+  const biggestPerimeter = perimeterFacts
+    .filter((p) => p.change != null)
+    .sort((a, b) => Math.abs(b.change!) - Math.abs(a.change!))[0] ?? null;
+
+  const currentState: Metric[] = [
+    metric(weightFact, goal === "lose_fat" ? true : null),
+    metric(fatFact, true, bodyFatSource === "estimated" ? `${bodyFatMethod} estimate` : bodyFatMethod),
+    biggestPerimeter ? metric(biggestPerimeter, goal === "lose_fat" ? true : null) : null,
+  ].filter((m): m is Metric => m !== null);
+
+  // Body-fat target is a percentage-point comparison, never "%".
+  if (goalProgress) {
+    currentState.push({
+      label: "Target",
+      value: goalProgress.targetBodyFat,
+      unit: "%",
+      change: null,
+      direction: "none",
+      good: null,
+      note: null,
+      source: null,
+    });
+    currentState.push({
+      label: "Gap to target",
+      value: goalProgress.gap,
+      unit: "pp",
+      change: null,
+      direction: "none",
+      good: null,
+      note: goalProgress.aboveTarget ? "above target" : "at or below target",
+      source: null,
+    });
+  }
+
+  // Confidence LEVEL is deterministic, so the model only writes the reason.
+  const confidenceLevel = sessions <= 1 || repeatedPerimeterValue
+    ? "limited"
+    : sessions === 2 || missingProfile.length > 0 || missingPerimeters.length > 3
+    ? "moderate"
+    : "high";
 
   const serverFields = {
     language,
@@ -747,7 +800,7 @@ Deno.serve(async (req: Request) => {
     periodStart: firstDate ? fmtDate(firstDate) : null,
     periodEnd: lastDate ? fmtDate(lastDate) : null,
     sessions,
-    glance,
+    current_state: currentState,
     goalNumbers: goalProgress,
     bodyFatSource,
     bodyFatMethod,
@@ -757,45 +810,70 @@ Deno.serve(async (req: Request) => {
   if (sessions === 0) {
     const report = {
       ...serverFields,
-      executive_summary: `No measurements were logged for ${client.name} in ${PERIOD_LABEL[period]}, so there is nothing to analyse for this period.`,
-      progress_highlights: [],
-      what_is_going_well: [],
-      areas_to_watch: ["No measurement data exists in the selected period."],
-      goal_progress: "Goal progress cannot be assessed without any measurements.",
-      coaching_insights: ["Take a full baseline measurement so future sessions have something to compare against."],
-      recommended_next_actions: [`Record a full measurement session for ${client.name}.`],
-      next_measurement_focus: ["Weight, neck, waist and abdomen — the minimum needed for a body-fat estimate."],
-      data_quality: "Insufficient — zero sessions in the selected period.",
-      trainer_insight: "Nothing is being tracked in this window. A baseline is the first priority.",
-      disclaimer: "This is fitness-progress analysis, not medical advice.",
+      trainer_attention: {
+        title: "No measurement sessions in this period",
+        summary: `Nothing was recorded for ${client.name} in ${PERIOD_LABEL[period]}, so there is nothing to interpret yet.`,
+        severity: "warning",
+      },
+      what_we_know: [],
+      what_we_dont_know: ["Nothing can be established without at least one measurement session."],
+      trainer_insight:
+        "There is no baseline for this period. One full measurement session creates the reference every later comparison depends on.",
+      next_check_in: [
+        "Record weight and body fat.",
+        "Record neck, waist and abdomen so a body-fat estimate becomes possible.",
+        "Confirm height and biological sex on the client profile.",
+      ],
+      data_confidence: { level: "limited", reason: "No measurement sessions in the selected period." },
       meta: { provider: null, model: null, cacheHit: false, fallbackUsed: false, latencyMs: 0 },
     };
     return jsonResponse({ success: true, cached: false, report });
   }
 
+
   /* ---------- Generate ---------- */
 
   const userPrompt = `${LANGUAGE_RULE[language]}
 
-Analyse this client and return the report JSON.
+You are a second pair of analytical eyes for an EXPERIENCED trainer. They know how to train people. Your value is spotting what the raw measurement screen does not show: unusual values, contradictions, missing information, and what cannot yet be concluded.
 
-Rules for this data set:
-- Trend capability: ${trendCapability}.
-- Body fat is ${bodyFatSource}${bodyFatMethod ? ` (${bodyFatMethod})` : ""}. ${
+HARD RULES
+1. NEVER do arithmetic. Every number you may cite already exists as a field below (change, changePct, changeSincePrevious, goalProgress.gap, spanDays, current values). Quote them exactly.
+2. NEVER invent a target, a timeline or a rate. Do not write things like "lose 5% in four weeks". If a target exists, only state the gap you are given.
+3. Body-fat differences are PERCENTAGE POINTS, never "%". Example: "14.4 percentage points above the 23% target".
+4. Trend capability here: ${trendCapability}. ${
+    sessions <= 1
+      ? "With one session you must NOT use the words trend, improvement, decline, progress, rate or trajectory. Describe current state and say what cannot yet be established."
+      : sessions === 2
+      ? "With two sessions describe the simple start-to-latest change only. Do NOT call it a trend."
+      : "Trend language is allowed, but only where the numbers support it."
+  }
+5. Say "measurement session(s)". This app records measurements, NOT training sessions - never mention training sessions or workouts logged.
+6. Do NOT repeat the same warning in more than one section. Say it once, where it matters most.
+7. No generic coaching ("eat healthy", "do cardio", "stay consistent"). Every line must follow from a number below.
+8. Never claim muscle gain or fat loss from body weight alone.
+9. Body fat here is ${bodyFatSource}${bodyFatMethod ? ` (${bodyFatMethod})` : ""}.${
     bodyFatSource === "estimated"
-      ? "Say once that it is a tape-measurement estimate, not a scan or lab measurement. Never present it as exact."
+      ? " Mention once that it is a tape-measurement estimate, not a scan or lab value. Never present it as directly measured."
       : ""
   }
-- Only discuss metrics present below. A metric carrying "note" has one data point — say a trend cannot be read for it.
-- Cite real numbers and dates from the data (e.g. "88 kg on 20 Jun 2026 to 84.5 kg on 16 Sep 2026").
-- NEVER do arithmetic. Every difference, percentage and gap you need is already a field in the data (change, changePct, changeSincePrevious, goalProgress.gap, spanDays). Quote those fields verbatim. Do not subtract, add or average anything yourself.
-- Large, uniform changes across many different perimeters in one step (for example every measurement moving by a similar large amount, or a limb measuring smaller than physically plausible) usually mean a measurement-technique, landmark, unit or data-entry problem. Flag this in areas_to_watch and ask for re-measurement instead of reading it as real body change.
-- areas_to_watch: report only real gaps such as missing perimeters, thin history or conflicting directions. Do not manufacture problems.
-- recommended_next_actions: 2 to 5 concrete actions grounded in these numbers. Never generic advice like "eat healthy" or "stay motivated".
-- coaching_insights is the most valuable section: surface patterns the raw numbers do not show at a glance.
+10. If dataQuality.repeatedPerimeterValue is present, do NOT declare it definitely wrong. Say the values are identical, that this is unusual, and that measurement technique, landmarks, units or data entry should be verified before those values are used to judge muscle or fat change.
+11. Never expose internal field names, JSON keys or implementation wording in your prose.
+12. No medical claims, diagnoses or disease risk.
+
+SECTION BRIEFS
+- trainer_attention: the single highest-value thing to flag. title = 6 words max. summary = 1-2 sentences. severity "critical" only if the data cannot be trusted at all, "warning" for a real data-quality issue or contradiction, otherwise "info".
+- what_we_know: 3-4 bullets max, each anchored to a real number.
+- what_we_dont_know: up to 3 bullets on what this data genuinely cannot establish yet.
+- trainer_insight: ONE short paragraph (2-3 sentences) answering "what is the most important thing to notice here?".
+- next_check_in: 3-4 specific verification or measurement actions that follow from the data. Inform the trainer, do not prescribe a programme.
+- data_confidence_reason: one short sentence explaining the confidence in plain words. Do not state the level itself.
+
+Keep every line short. The whole report is read in about 30 seconds.
 
 VERIFIED_CLIENT_ANALYSIS:
 ${JSON.stringify(analysis)}`;
+
 
   const run = await runProviders(SYSTEM_PROMPT, userPrompt);
 
@@ -810,9 +888,15 @@ ${JSON.stringify(analysis)}`;
     );
   }
 
+  const { data_confidence_reason, ...modelSections } = run.report as Record<string, unknown>;
+
   const report = {
-    ...run.report,
+    ...modelSections,
     ...serverFields,
+    data_confidence: {
+      level: confidenceLevel,
+      reason: typeof data_confidence_reason === "string" ? data_confidence_reason : "",
+    },
     meta: {
       provider: run.provider,
       model: run.model,

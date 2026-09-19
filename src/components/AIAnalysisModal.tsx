@@ -2,17 +2,19 @@ import React, { useRef, useState } from 'react';
 import {
   Sparkles,
   Check,
-  Target,
-  Lightbulb,
-  CalendarCheck,
   ArrowRight,
   ArrowLeft,
   TrendingUp,
   TrendingDown,
   Minus,
-  MessageCircle,
   Copy,
   AlertTriangle,
+  Info,
+  AlertOctagon,
+  HelpCircle,
+  Lightbulb,
+  CalendarCheck,
+  ShieldCheck,
 } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import {
@@ -21,7 +23,7 @@ import {
   AiReportPeriod,
   AiReportGoal,
   AiReportLanguage,
-  AiGlanceTile,
+  AiMetric,
 } from '../types';
 import { Modal } from './ui/Modal';
 import { ErrorBoundary } from './ui/ErrorBoundary';
@@ -50,37 +52,38 @@ const LANGUAGES: { id: AiReportLanguage; label: string; hint: string }[] = [
   { id: 'mr', label: 'Marathi', hint: 'पूर्ण मराठी' },
 ];
 
-/** A single number tile. Values come from the server, never from model prose. */
-const GlanceCard: React.FC<{ tile: AiGlanceTile }> = ({ tile }) => {
-  const Icon =
-    tile.direction === 'increase' ? TrendingUp : tile.direction === 'decrease' ? TrendingDown : Minus;
-  const tone = tile.good === null ? 'text-white' : tile.good ? 'text-success' : 'text-accent';
+/**
+ * One current-state metric. Values are server-computed.
+ * With a single measurement session there is no change, so no arrow and no
+ * fake trend is drawn - just the value and a short note.
+ */
+const MetricCard: React.FC<{ m: AiMetric }> = ({ m }) => {
+  const Icon = m.direction === 'increase' ? TrendingUp : m.direction === 'decrease' ? TrendingDown : Minus;
+  const tone = m.good === null ? 'text-white' : m.good ? 'text-success' : 'text-accent';
 
   return (
-    <div className="bg-surface-alt rounded-xl p-3 flex flex-col gap-1">
+    <div className="bg-surface-alt rounded-xl p-3 flex flex-col gap-1 min-w-0">
       <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted truncate">
-        {tile.label}
+        {m.label}
       </span>
-      {tile.change != null ? (
-        <>
-          <span className={`text-lg font-bold leading-none flex items-center gap-1 ${tone}`}>
-            <Icon className="w-4 h-4 shrink-0" />
-            {tile.change > 0 ? '+' : ''}
-            {tile.change}
-            <span className="text-xs font-semibold">{tile.unit}</span>
-          </span>
-          <span className="text-[11px] text-text-muted">
-            {tile.from} → {tile.to} {tile.unit}
-          </span>
-        </>
+      <span className="text-lg font-bold text-white leading-none">
+        {m.value}
+        {m.unit && <span className="text-xs font-semibold ml-0.5">{m.unit}</span>}
+      </span>
+      {m.change !== null ? (
+        <span className={`text-[11px] font-semibold flex items-center gap-0.5 ${tone}`}>
+          <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />
+          {m.change > 0 ? '+' : ''}
+          {m.change} {m.unit}
+        </span>
       ) : (
-        <>
-          <span className="text-lg font-bold text-white leading-none">
-            {tile.to}
-            <span className="text-xs font-semibold ml-0.5">{tile.unit}</span>
-          </span>
-          <span className="text-[11px] text-text-muted">{tile.note ?? 'No change yet'}</span>
-        </>
+        <span className="text-[11px] text-text-muted leading-tight">{m.note ?? '—'}</span>
+      )}
+      {m.change !== null && m.source && (
+        <span className="text-[10px] text-text-muted leading-tight">{m.source}</span>
+      )}
+      {m.change === null && m.source && (
+        <span className="text-[10px] text-text-muted leading-tight">{m.source}</span>
       )}
     </div>
   );
@@ -90,12 +93,36 @@ const Bullets: React.FC<{ items: string[] }> = ({ items }) => (
   <ul className="space-y-1.5">
     {items.map((c, i) => (
       <li key={i} className="text-sm text-white leading-snug flex gap-2">
-        <span className="text-text-muted shrink-0">•</span>
+        <span className="text-text-muted shrink-0" aria-hidden="true">&bull;</span>
         <span>{c}</span>
       </li>
     ))}
   </ul>
 );
+
+/** Section heading. Icon is decorative only, so it can never leak as text. */
+const SectionTitle: React.FC<{ icon: React.ReactNode; children: React.ReactNode; className?: string }> = ({
+  icon,
+  children,
+  className = 'text-white',
+}) => (
+  <h3 className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-2 ${className}`}>
+    <span aria-hidden="true" className="inline-flex shrink-0">{icon}</span>
+    <span>{children}</span>
+  </h3>
+);
+
+const SEVERITY_STYLE = {
+  info: { box: 'bg-surface-alt border-border', text: 'text-white', Icon: Info },
+  warning: { box: 'bg-amber-500/10 border-amber-500/30', text: 'text-amber-400', Icon: AlertTriangle },
+  critical: { box: 'bg-danger-bg border-danger/40', text: 'text-danger', Icon: AlertOctagon },
+} as const;
+
+const CONFIDENCE_STYLE = {
+  high: { dot: 'bg-success', label: 'High' },
+  moderate: { dot: 'bg-amber-400', label: 'Moderate' },
+  limited: { dot: 'bg-danger', label: 'Limited' },
+} as const;
 
 export const AIAnalysisModal: React.FC<Props> = ({ client, onClose }) => {
   const [step, setStep] = useState(1);
@@ -154,7 +181,11 @@ export const AIAnalysisModal: React.FC<Props> = ({ client, onClose }) => {
 
   const copySummary = async () => {
     if (!report) return;
-    const text = [report.executive_summary, '', ...report.recommended_next_actions.map((a) => `• ${a}`)]
+    const text = [
+      report.trainer_attention.summary,
+      '',
+      ...report.next_check_in.map((a) => `• ${a}`),
+    ]
       .join('\n')
       .trim();
     if (!text) return;
@@ -375,125 +406,112 @@ export const AIAnalysisModal: React.FC<Props> = ({ client, onClose }) => {
               </p>
             )}
 
-            {report.glance.length > 0 && (
+            {/* 1. CURRENT STATE */}
+            {report.current_state.length > 0 && (
               <section>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
-                  Progress at a glance
-                </h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {report.glance.map((t) => (
-                    <GlanceCard key={t.label} tile={t} />
+                <SectionTitle icon={<Sparkles className="w-3.5 h-3.5 text-accent" />} className="text-text-muted">
+                  Current state
+                </SectionTitle>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {report.current_state.map((m) => (
+                    <MetricCard key={m.label} m={m} />
                   ))}
                 </div>
                 <p className="text-[11px] text-text-muted mt-2">
-                  {report.periodStart} – {report.periodEnd} · {report.sessions} measurements
+                  {report.periodStart === report.periodEnd
+                    ? report.periodStart
+                    : `${report.periodStart} – ${report.periodEnd}`}
+                  {' · '}
+                  {report.sessions} measurement session{report.sessions === 1 ? '' : 's'}
                 </p>
               </section>
             )}
 
-            <p className="text-white text-sm leading-relaxed">{report.executive_summary}</p>
-
-            {report.progress_highlights.length > 0 && (
-              <section>
-                <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider mb-2">
-                  <TrendingUp className="w-3.5 h-3.5 text-accent" /> Progress highlights
-                </h3>
-                <Bullets items={report.progress_highlights} />
-              </section>
-            )}
-
-            {report.what_is_going_well.length > 0 && (
-              <section>
-                <h3 className="flex items-center gap-1.5 text-success text-xs font-semibold uppercase tracking-wider mb-2">
-                  <Check className="w-3.5 h-3.5" /> What&apos;s going well
-                </h3>
-                <Bullets items={report.what_is_going_well} />
-              </section>
-            )}
-
-            {report.areas_to_watch.length > 0 && (
-              <section>
-                <h3 className="flex items-center gap-1.5 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Areas to watch
-                </h3>
-                <Bullets items={report.areas_to_watch} />
-              </section>
-            )}
-
-            {(report.goalNumbers || report.goal_progress) && (
-              <section className="bg-accent/10 border border-accent/20 rounded-xl p-4">
-                <h3 className="text-accent text-xs font-semibold uppercase tracking-wider mb-2">Goal progress</h3>
-                {report.goalNumbers && (
-                  <div className="grid grid-cols-3 gap-2 mb-2">
-                    <div>
-                      <p className="text-[10px] uppercase text-text-muted">Target</p>
-                      <p className="text-base font-bold text-white">{report.goalNumbers.targetBodyFat}%</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase text-text-muted">Current</p>
-                      <p className="text-base font-bold text-white">{report.goalNumbers.currentBodyFat}%</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase text-text-muted">Gap</p>
-                      <p className="text-base font-bold text-accent">{report.goalNumbers.gap}%</p>
+            {/* 2. TRAINER ATTENTION */}
+            {report.trainer_attention.summary && (() => {
+              const st = SEVERITY_STYLE[report.trainer_attention.severity];
+              return (
+                <section className={`rounded-xl border p-4 ${st.box}`}>
+                  <div className="flex items-start gap-2.5">
+                    <st.Icon className={`w-4 h-4 shrink-0 mt-0.5 ${st.text}`} aria-hidden="true" />
+                    <div className="min-w-0">
+                      {report.trainer_attention.title && (
+                        <p className={`text-sm font-semibold ${st.text}`}>{report.trainer_attention.title}</p>
+                      )}
+                      <p className="text-sm text-white leading-snug mt-0.5">
+                        {report.trainer_attention.summary}
+                      </p>
                     </div>
                   </div>
-                )}
-                {report.goal_progress && (
-                  <p className="text-sm text-white leading-snug">{report.goal_progress}</p>
-                )}
-              </section>
-            )}
+                </section>
+              );
+            })()}
 
-            {report.coaching_insights.length > 0 && (
+            {/* 3. WHAT WE KNOW */}
+            {report.what_we_know.length > 0 && (
               <section>
-                <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider mb-2">
-                  <Lightbulb className="w-3.5 h-3.5 text-accent" /> Coaching insights
-                </h3>
-                <Bullets items={report.coaching_insights} />
+                <SectionTitle icon={<Check className="w-3.5 h-3.5" />} className="text-success">
+                  What we know
+                </SectionTitle>
+                <Bullets items={report.what_we_know} />
               </section>
             )}
 
-            {report.recommended_next_actions.length > 0 && (
+            {/* 4. WHAT WE DON'T KNOW YET */}
+            {report.what_we_dont_know.length > 0 && (
               <section>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <h3 className="flex items-center gap-1.5 text-accent text-xs font-semibold uppercase tracking-wider">
-                    <Target className="w-3.5 h-3.5" /> Recommended next actions
-                  </h3>
-                  <button
-                    onClick={copySummary}
-                    className="text-[11px] font-semibold text-accent flex items-center gap-1 hover:text-accent-hover"
-                  >
-                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-                <Bullets items={report.recommended_next_actions} />
+                <SectionTitle icon={<HelpCircle className="w-3.5 h-3.5" />} className="text-text-muted">
+                  What we don&apos;t know yet
+                </SectionTitle>
+                <Bullets items={report.what_we_dont_know} />
               </section>
             )}
 
-            {report.next_measurement_focus.length > 0 && (
-              <section>
-                <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider mb-2">
-                  <CalendarCheck className="w-3.5 h-3.5 text-accent" /> Next measurement focus
-                </h3>
-                <Bullets items={report.next_measurement_focus} />
-              </section>
-            )}
-
+            {/* 5. TRAINER INSIGHT */}
             {report.trainer_insight && (
               <section className="bg-surface-alt rounded-xl p-4">
-                <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider mb-2">
-                  <MessageCircle className="w-3.5 h-3.5 text-accent" /> Trainer insight
-                </h3>
+                <SectionTitle icon={<Lightbulb className="w-3.5 h-3.5 text-accent" />}>
+                  Trainer insight
+                </SectionTitle>
                 <p className="text-sm text-white leading-relaxed">{report.trainer_insight}</p>
               </section>
             )}
 
-            <div className="border-t border-border pt-3 space-y-1">
-              <p className="text-[11px] text-text-muted">{report.data_quality}</p>
-              <p className="text-[11px] text-text-muted italic">{report.disclaimer}</p>
-            </div>
+            {/* 6. NEXT CHECK-IN */}
+            {report.next_check_in.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <SectionTitle icon={<CalendarCheck className="w-3.5 h-3.5 text-accent" />} className="text-white mb-0">
+                    Next check-in
+                  </SectionTitle>
+                  <button
+                    onClick={copySummary}
+                    className="text-[11px] font-semibold text-accent flex items-center gap-1 hover:text-accent-hover"
+                  >
+                    {copied
+                      ? <Check className="w-3 h-3" aria-hidden="true" />
+                      : <Copy className="w-3 h-3" aria-hidden="true" />}
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <Bullets items={report.next_check_in} />
+              </section>
+            )}
+
+            {/* 7. DATA CONFIDENCE */}
+            <section className="border-t border-border pt-3 flex items-start gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-text-muted shrink-0 mt-0.5" aria-hidden="true" />
+              <p className="text-[11px] text-text-muted leading-snug">
+                <span className="inline-flex items-center gap-1.5 font-semibold text-white">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_STYLE[report.data_confidence.level].dot}`}
+                    aria-hidden="true"
+                  />
+                  {CONFIDENCE_STYLE[report.data_confidence.level].label} confidence
+                </span>
+                {report.data_confidence.reason && <> — {report.data_confidence.reason}</>}
+              </p>
+            </section>
           </div>
           </ErrorBoundary>
         )}

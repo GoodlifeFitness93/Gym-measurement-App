@@ -103,31 +103,40 @@ export type AiReportPeriod = '2w' | '1m' | '3m' | '6m';
 export type AiReportGoal = 'gain_muscle' | 'lose_fat';
 export type AiReportLanguage = 'en' | 'mr' | 'mr_en';
 
-/**
- * One "Progress at a glance" tile. Computed server-side from real measurements
- * and returned alongside the model's prose, so the numbers shown can never be
- * altered by generation or translation.
- */
-export interface AiGlanceTile {
+/** One current-state metric card. Computed server-side, never model output. */
+export interface AiMetric {
   label: string;
+  value: number;
   unit: string;
-  from: number | null;
-  to: number;
+  /** null when only one measurement session exists - no arrows, no fake trend. */
   change: number | null;
-  changePct: number | null;
-  direction: 'increase' | 'decrease' | 'no change' | 'none';
+  direction: 'increase' | 'decrease' | 'flat' | 'none';
   good: boolean | null;
   note: string | null;
+  /** e.g. "US Navy estimate" - keeps estimated distinct from measured. */
+  source: string | null;
 }
 
 export interface AiGoalProgress {
   targetBodyFat: number;
   currentBodyFat: number;
+  /** Percentage points, not percent. */
   gap: number;
   aboveTarget: boolean;
 }
 
-/** Provider trace. Internal/debug only — not shown in the trainer UI. */
+export interface AiTrainerAttention {
+  title: string;
+  summary: string;
+  severity: 'info' | 'warning' | 'critical';
+}
+
+export interface AiDataConfidence {
+  level: 'high' | 'moderate' | 'limited';
+  reason: string;
+}
+
+/** Provider trace. Internal/debug only - not shown in the trainer UI. */
 export interface AiReportMeta {
   provider: string | null;
   model: string | null;
@@ -140,29 +149,21 @@ export interface AiReportMeta {
 /**
  * The canonical AI report contract.
  *
- * Field names match the Edge Function response exactly (snake_case for the
- * model-written prose, camelCase for server-computed values) so there is one
- * shape, not a client-side rename layer that can drift. Cached and fresh
- * responses return this identical shape.
- *
- * Always build one via `normalizeAiReport()` — never trust a raw response.
+ * Field names match the Edge Function response exactly so there is one shape,
+ * not a client-side rename layer that can drift. Cached and fresh responses
+ * return this identical shape. Always build one via `normalizeAiReport()`.
  */
 export interface AiReport {
-  // Model-written prose (11 required sections).
-  executive_summary: string;
-  progress_highlights: string[];
-  what_is_going_well: string[];
-  areas_to_watch: string[];
-  goal_progress: string;
-  coaching_insights: string[];
-  recommended_next_actions: string[];
-  next_measurement_focus: string[];
-  data_quality: string;
+  // Model-written prose.
+  trainer_attention: AiTrainerAttention;
+  what_we_know: string[];
+  what_we_dont_know: string[];
   trainer_insight: string;
-  disclaimer: string;
+  next_check_in: string[];
+  data_confidence: AiDataConfidence;
 
-  // Server-computed — never produced or altered by a model.
-  glance: AiGlanceTile[];
+  // Server-computed - never produced or altered by a model.
+  current_state: AiMetric[];
   goalNumbers: AiGoalProgress | null;
   language: AiReportLanguage;
   periodLabel: string;
