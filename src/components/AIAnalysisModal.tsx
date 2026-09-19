@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Sparkles,
   Check,
@@ -24,6 +24,8 @@ import {
   AiGlanceTile,
 } from '../types';
 import { Modal } from './ui/Modal';
+import { ErrorBoundary } from './ui/ErrorBoundary';
+import { normalizeAiReport, isReportEmpty } from '../lib/aiReport';
 
 interface Props {
   client: Client;
@@ -44,7 +46,8 @@ const GOALS: { id: AiReportGoal; label: string; hint: string }[] = [
 
 const LANGUAGES: { id: AiReportLanguage; label: string; hint: string }[] = [
   { id: 'en', label: 'English', hint: 'Simple, plain English' },
-  { id: 'mr_en', label: 'Marathi + English', hint: 'मराठी with normal gym words in English' },
+  { id: 'mr_en', label: 'Marathi + English', hint: 'मराठी with gym words in English' },
+  { id: 'mr', label: 'Marathi', hint: 'पूर्ण मराठी' },
 ];
 
 /** A single number tile. Values come from the server, never from model prose. */
@@ -105,8 +108,12 @@ export const AIAnalysisModal: React.FC<Props> = ({ client, onClose }) => {
   const [report, setReport] = useState<AiReport | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const generate = async (lang: AiReportLanguage) => {
-    if (!period || !goal || loading) return;
+  /** Guards against a double-tap firing two identical generations. */
+  const inFlight = useRef(false);
+
+  const generate = async (lang: AiReportLanguage, force = false) => {
+    if (!period || !goal || loading || inFlight.current) return;
+    inFlight.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -119,6 +126,7 @@ export const AIAnalysisModal: React.FC<Props> = ({ client, onClose }) => {
           goal,
           target_body_fat: targetBodyFat ? parseFloat(targetBodyFat) : null,
           language: lang,
+          force,
         },
       });
       if (fnErr) {
@@ -127,20 +135,31 @@ export const AIAnalysisModal: React.FC<Props> = ({ client, onClose }) => {
         throw new Error(body?.error || fnErr.message);
       }
       if (!data?.success) throw new Error(data?.error || 'Failed to generate report');
-      setReport(data.report as AiReport);
+
+      // Cached and fresh responses go through this identical path, so the
+      // renderer only ever sees a fully-populated report.
+      const normalized = normalizeAiReport(data.report);
+      if (isReportEmpty(normalized)) throw new Error('The AI returned an empty report. Please try again.');
+
+      setReport(normalized);
       setLanguage(lang);
       setStep(4);
     } catch (err: any) {
       setError(err.message || "We couldn't generate the analysis right now. Please try again.");
     } finally {
+      inFlight.current = false;
       setLoading(false);
     }
   };
 
-  const copyClientMessage = async () => {
-    if (!report?.clientMessage) return;
+  const copySummary = async () => {
+    if (!report) return;
+    const text = [report.executive_summary, '', ...report.recommended_next_actions.map((a) => `• ${a}`)]
+      .join('\n')
+      .trim();
+    if (!text) return;
     try {
-      await navigator.clipboard.writeText(report.clientMessage);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -328,6 +347,10 @@ export const AIAnalysisModal: React.FC<Props> = ({ client, onClose }) => {
         )}
 
         {step === 4 && report && (
+          <ErrorBoundary
+            title="Unable to display the AI report."
+            onRetry={() => { setReport(null); setStep(3); }}
+          >
           <div className="space-y-5">
             {/* Language switch: regenerates in the other language, numbers unchanged. */}
             <div className="flex items-center gap-1 bg-surface-alt rounded-lg p-1">
@@ -363,91 +386,116 @@ export const AIAnalysisModal: React.FC<Props> = ({ client, onClose }) => {
                   ))}
                 </div>
                 <p className="text-[11px] text-text-muted mt-2">
-                  {report.periodStart} – {report.periodEnd} · {report.measurementCount} measurements
+                  {report.periodStart} – {report.periodEnd} · {report.sessions} measurements
                 </p>
               </section>
             )}
 
-            <p className="text-white text-sm leading-relaxed">{report.summary}</p>
+            <p className="text-white text-sm leading-relaxed">{report.executive_summary}</p>
 
-            {report.whatsGoingWell.length > 0 && (
+            {report.progress_highlights.length > 0 && (
+              <section>
+                <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider mb-2">
+                  <TrendingUp className="w-3.5 h-3.5 text-accent" /> Progress highlights
+                </h3>
+                <Bullets items={report.progress_highlights} />
+              </section>
+            )}
+
+            {report.what_is_going_well.length > 0 && (
               <section>
                 <h3 className="flex items-center gap-1.5 text-success text-xs font-semibold uppercase tracking-wider mb-2">
                   <Check className="w-3.5 h-3.5" /> What&apos;s going well
                 </h3>
-                <Bullets items={report.whatsGoingWell} />
+                <Bullets items={report.what_is_going_well} />
               </section>
             )}
 
-            {report.focusNext.length > 0 && (
+            {report.areas_to_watch.length > 0 && (
               <section>
-                <h3 className="flex items-center gap-1.5 text-accent text-xs font-semibold uppercase tracking-wider mb-2">
-                  <Target className="w-3.5 h-3.5" /> Focus next
+                <h3 className="flex items-center gap-1.5 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Areas to watch
                 </h3>
-                <Bullets items={report.focusNext} />
+                <Bullets items={report.areas_to_watch} />
               </section>
             )}
 
-            <section className="bg-accent/10 border border-accent/20 rounded-xl p-4">
-              <h3 className="text-accent text-xs font-semibold uppercase tracking-wider mb-2">Goal progress</h3>
-              {report.goalProgress && (
-                <div className="grid grid-cols-3 gap-2 mb-2">
-                  <div>
-                    <p className="text-[10px] uppercase text-text-muted">Target</p>
-                    <p className="text-base font-bold text-white">{report.goalProgress.targetBodyFat}%</p>
+            {(report.goalNumbers || report.goal_progress) && (
+              <section className="bg-accent/10 border border-accent/20 rounded-xl p-4">
+                <h3 className="text-accent text-xs font-semibold uppercase tracking-wider mb-2">Goal progress</h3>
+                {report.goalNumbers && (
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div>
+                      <p className="text-[10px] uppercase text-text-muted">Target</p>
+                      <p className="text-base font-bold text-white">{report.goalNumbers.targetBodyFat}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-text-muted">Current</p>
+                      <p className="text-base font-bold text-white">{report.goalNumbers.currentBodyFat}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-text-muted">Gap</p>
+                      <p className="text-base font-bold text-accent">{report.goalNumbers.gap}%</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] uppercase text-text-muted">Current</p>
-                    <p className="text-base font-bold text-white">{report.goalProgress.currentBodyFat}%</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase text-text-muted">Gap</p>
-                    <p className="text-base font-bold text-accent">{report.goalProgress.gap}%</p>
-                  </div>
-                </div>
-              )}
-              <p className="text-sm text-white leading-snug">{report.goalStatement}</p>
-            </section>
+                )}
+                {report.goal_progress && (
+                  <p className="text-sm text-white leading-snug">{report.goal_progress}</p>
+                )}
+              </section>
+            )}
 
-            <section>
-              <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider mb-2">
-                <Lightbulb className="w-3.5 h-3.5 text-accent" /> Trainer insight
-              </h3>
-              <p className="text-sm text-text-muted leading-relaxed">{report.trainerInsight}</p>
-            </section>
-
-            {report.nextCheckIn.length > 0 && (
+            {report.coaching_insights.length > 0 && (
               <section>
                 <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider mb-2">
-                  <CalendarCheck className="w-3.5 h-3.5 text-accent" /> Next check-in
+                  <Lightbulb className="w-3.5 h-3.5 text-accent" /> Coaching insights
                 </h3>
-                <Bullets items={report.nextCheckIn} />
+                <Bullets items={report.coaching_insights} />
               </section>
             )}
 
-            {report.clientMessage && (
-              <section className="bg-surface-alt rounded-xl p-4">
+            {report.recommended_next_actions.length > 0 && (
+              <section>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider">
-                    <MessageCircle className="w-3.5 h-3.5 text-accent" /> Tell the client
+                  <h3 className="flex items-center gap-1.5 text-accent text-xs font-semibold uppercase tracking-wider">
+                    <Target className="w-3.5 h-3.5" /> Recommended next actions
                   </h3>
                   <button
-                    onClick={copyClientMessage}
+                    onClick={copySummary}
                     className="text-[11px] font-semibold text-accent flex items-center gap-1 hover:text-accent-hover"
                   >
                     {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                     {copied ? 'Copied' : 'Copy'}
                   </button>
                 </div>
-                <p className="text-sm text-white leading-relaxed">{report.clientMessage}</p>
+                <Bullets items={report.recommended_next_actions} />
+              </section>
+            )}
+
+            {report.next_measurement_focus.length > 0 && (
+              <section>
+                <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider mb-2">
+                  <CalendarCheck className="w-3.5 h-3.5 text-accent" /> Next measurement focus
+                </h3>
+                <Bullets items={report.next_measurement_focus} />
+              </section>
+            )}
+
+            {report.trainer_insight && (
+              <section className="bg-surface-alt rounded-xl p-4">
+                <h3 className="flex items-center gap-1.5 text-white text-xs font-semibold uppercase tracking-wider mb-2">
+                  <MessageCircle className="w-3.5 h-3.5 text-accent" /> Trainer insight
+                </h3>
+                <p className="text-sm text-white leading-relaxed">{report.trainer_insight}</p>
               </section>
             )}
 
             <div className="border-t border-border pt-3 space-y-1">
-              <p className="text-[11px] text-text-muted">{report.dataQuality}</p>
+              <p className="text-[11px] text-text-muted">{report.data_quality}</p>
               <p className="text-[11px] text-text-muted italic">{report.disclaimer}</p>
             </div>
           </div>
+          </ErrorBoundary>
         )}
       </div>
     </Modal>

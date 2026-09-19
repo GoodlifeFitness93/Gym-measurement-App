@@ -101,7 +101,7 @@ export interface CustomMeasureValue {
 
 export type AiReportPeriod = '2w' | '1m' | '3m' | '6m';
 export type AiReportGoal = 'gain_muscle' | 'lose_fat';
-export type AiReportLanguage = 'en' | 'mr_en';
+export type AiReportLanguage = 'en' | 'mr' | 'mr_en';
 
 /**
  * One "Progress at a glance" tile. Computed server-side from real measurements
@@ -127,26 +127,51 @@ export interface AiGoalProgress {
   aboveTarget: boolean;
 }
 
+/** Provider trace. Internal/debug only — not shown in the trainer UI. */
+export interface AiReportMeta {
+  provider: string | null;
+  model: string | null;
+  cacheHit: boolean;
+  fallbackUsed?: boolean;
+  latencyMs?: number;
+  generatedAt?: string;
+}
+
+/**
+ * The canonical AI report contract.
+ *
+ * Field names match the Edge Function response exactly (snake_case for the
+ * model-written prose, camelCase for server-computed values) so there is one
+ * shape, not a client-side rename layer that can drift. Cached and fresh
+ * responses return this identical shape.
+ *
+ * Always build one via `normalizeAiReport()` — never trust a raw response.
+ */
 export interface AiReport {
+  // Model-written prose (11 required sections).
+  executive_summary: string;
+  progress_highlights: string[];
+  what_is_going_well: string[];
+  areas_to_watch: string[];
+  goal_progress: string;
+  coaching_insights: string[];
+  recommended_next_actions: string[];
+  next_measurement_focus: string[];
+  data_quality: string;
+  trainer_insight: string;
+  disclaimer: string;
+
+  // Server-computed — never produced or altered by a model.
+  glance: AiGlanceTile[];
+  goalNumbers: AiGoalProgress | null;
   language: AiReportLanguage;
   periodLabel: string;
-  periodStart?: string;
-  periodEnd?: string;
-  measurementCount?: number;
-  /** Numeric tiles — server-computed, not model output. */
-  glance: AiGlanceTile[];
-  summary: string;
-  whatsGoingWell: string[];
-  focusNext: string[];
-  goalProgress: AiGoalProgress | null;
-  goalStatement: string;
-  trainerInsight: string;
-  nextCheckIn: string[];
-  /** Easy-language lines the trainer can send straight to the client. */
-  clientMessage: string;
-  dataQuality: string;
-  disclaimer: string;
-  bodyFatSource?: 'measured' | 'us_navy' | 'none';
+  periodStart: string | null;
+  periodEnd: string | null;
+  sessions: number;
+  bodyFatSource: 'measured' | 'estimated' | 'none';
+  bodyFatMethod: string | null;
+  meta: AiReportMeta;
 }
 
 export type ActiveScreen =

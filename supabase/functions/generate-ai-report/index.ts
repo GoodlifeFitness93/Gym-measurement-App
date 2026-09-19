@@ -789,6 +789,7 @@ Rules for this data set:
 - Only discuss metrics present below. A metric carrying "note" has one data point — say a trend cannot be read for it.
 - Cite real numbers and dates from the data (e.g. "88 kg on 20 Jun 2026 to 84.5 kg on 16 Sep 2026").
 - NEVER do arithmetic. Every difference, percentage and gap you need is already a field in the data (change, changePct, changeSincePrevious, goalProgress.gap, spanDays). Quote those fields verbatim. Do not subtract, add or average anything yourself.
+- Large, uniform changes across many different perimeters in one step (for example every measurement moving by a similar large amount, or a limb measuring smaller than physically plausible) usually mean a measurement-technique, landmark, unit or data-entry problem. Flag this in areas_to_watch and ask for re-measurement instead of reading it as real body change.
 - areas_to_watch: report only real gaps such as missing perimeters, thin history or conflicting directions. Do not manufacture problems.
 - recommended_next_actions: 2 to 5 concrete actions grounded in these numbers. Never generic advice like "eat healthy" or "stay motivated".
 - coaching_insights is the most valuable section: surface patterns the raw numbers do not show at a glance.
